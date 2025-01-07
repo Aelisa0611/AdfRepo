@@ -62,6 +62,23 @@
 						"type": "Expression"
 					}
 				}
+			},
+			{
+				"name": "Set variable1_copy1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "arrayvar1",
+					"value": {
+						"value": "@variables('arrayvar')",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"variables": {
