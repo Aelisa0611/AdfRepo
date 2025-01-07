@@ -1,0 +1,38 @@
+{
+	"name": "pip_df_src_tgt",
+	"properties": {
+		"description": "we can call here dataflow for the running.\ndata pipeline is work like a workflow in informatica",
+		"activities": [
+			{
+				"name": "pip_df_src_tgt",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_src_tgt",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "None",
+					"cacheSinks": {
+						"firstRowOnly": true
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2024-11-20T22:01:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,33 @@
+{
+	"name": "Targetdataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linkstgGen2",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"paraDataSet": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().paraDataSet",
+					"type": "Expression"
+				},
+				"folderPath": "Target",
+				"fileSystem": "data"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

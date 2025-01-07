@@ -1,0 +1,17 @@
+{
+	"name": "OracleTableMembeLoyalty",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Oracle1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "HR",
+			"table": "STG_MEMBER_LOYALTY"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

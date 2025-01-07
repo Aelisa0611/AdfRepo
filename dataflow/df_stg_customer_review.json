@@ -1,0 +1,69 @@
+{
+	"name": "df_stg_customer_review",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextCust_review_stg",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableCustReviewStg",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "cast1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CUSTOMER_REVIEW_ID as string,",
+				"          RATING_SCALE as string,",
+				"          FEEDBACK as string,",
+				"          FEEDBACK_DATE as string,",
+				"          RECOMENDED as string,",
+				"          CUSTOMER_ID as string,",
+				"          ORDER_ID as string,",
+				"          STORE_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 cast(output(",
+				"          CUSTOMER_REVIEW_ID as integer,",
+				"          RATING_SCALE as decimal(5,2),",
+				"          FEEDBACK_DATE as date 'MM/dd/yyyy',",
+				"          CUSTOMER_ID as integer,",
+				"          ORDER_ID as integer,",
+				"          STORE_ID as integer",
+				"     ),",
+				"     errors: true) ~> cast1",
+				"cast1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     recreate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+			]
+		}
+	}
+}

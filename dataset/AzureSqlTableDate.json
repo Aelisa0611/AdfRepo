@@ -1,0 +1,121 @@
+{
+	"name": "AzureSqlTableDate",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "DATE_KEY",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DAY_YYYY_MM_DD",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "DAY_US_MM_DD_YYYY",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "DAY_US_LONG",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DAY_US_M_D_YY",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "WEEK_SHORT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_NUMBER",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_LONG",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_IN_QUARTER_NUMBER",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_IN_YEAR_SHORT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_IN_YEAR_LONG",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_WK_QTR_YEAR",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_FROM_TO",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_STARTING",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_WK_YEAR_CONT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_WK_YEAR",
+				"type": "nvarchar"
+			},
+			{
+				"name": "WEEK_WK_QTR_YEAR_CONT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DAY_IN_WEEK_SHORT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DAY_IN_WEEK_NUMBER",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DAY_IN_WEEK_LONG",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_SHORT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_NUMBER",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MONTH_LONG",
+				"type": "nvarchar"
+			},
+			{
+				"name": "QUARTER_SHORT_US",
+				"type": "nvarchar"
+			},
+			{
+				"name": "YEAR",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "Date_data"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

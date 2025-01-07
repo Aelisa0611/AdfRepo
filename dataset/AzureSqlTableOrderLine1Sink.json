@@ -1,0 +1,17 @@
+{
+	"name": "AzureSqlTableOrderLine1Sink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "OrderLine"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

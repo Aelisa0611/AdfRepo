@@ -1,0 +1,54 @@
+{
+	"name": "AzureSqlTableOrderLine1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ORDER_LINE_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "UNIT_PRICE",
+				"type": "nvarchar"
+			},
+			{
+				"name": "QUANTITY",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PROMOTION_AMOUNT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PROMOTION_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ORDER_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PRODUCT_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PRODUCT_TOPPING_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TOTAL_AMOUNT",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "OrderLine_1"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

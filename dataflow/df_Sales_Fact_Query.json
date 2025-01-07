@@ -1,0 +1,111 @@
+{
+	"name": "df_Sales_Fact_Query",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "df_PizzaProject_Customer_DIM",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableSalesFact",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          order_line_id as integer,",
+				"          order_id as integer,",
+				"          customer_dim_key as long,",
+				"          payment_ref_key as integer,",
+				"          channel_ref_key as integer,",
+				"          delivery_type_ref_key as integer,",
+				"          product_topping_dim_key as integer,",
+				"          loc_dim_key as integer,",
+				"          Surr_Product_key as integer,",
+				"          promotion_dim_key as integer,",
+				"          date_key as string,",
+				"          order_date as date,",
+				"          order_status as string,",
+				"          quantity as integer,",
+				"          unit_price as decimal(10,2),",
+				"          topping_price as decimal(5,2),",
+				"          promotion_amount as decimal(10,2)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'SELECT\\r\\n    orl.order_line_id as order_line_id,\\r\\n    ord.order_id as order_id,\\r\\n    cust.customer_dim_key as customer_dim_key,\\r\\n    pmr.payment_ref_key as payment_ref_key,\\r\\n    cna.channel_ref_key as channel_ref_key,\\r\\n    dlv.delivery_type_ref_key as delivery_type_ref_key,\\r\\n    ptd.product_topping_dim_key as product_topping_dim_key,\\r\\n    loc.loc_dim_key as loc_dim_key,\\r\\n    prd.Surr_Product_key as Surr_Product_key,\\r\\n    prm.promotion_dim_key as promotion_dim_key,\\r\\n    dt.date_key as date_key,\\r\\n    ord.order_date as order_date,\\r\\n    ord.order_status as order_status,\\r\\n    orl.quantity as quantity,\\r\\n    orl.unit_price as unit_price,\\r\\n    ptd.topping_price as topping_price,\\r\\n    orl.promotion_amount as promotion_amount\\r\\nFROM\\r\\n         hr.OrderLine orl\\r\\n    JOIN [hr].[Order]            ord ON orl.order_id = ord.order_id\\r\\n    JOIN hr.CUSTOMER_DIM      cust ON cust.customer_id = ord.customer_id\\r\\n    JOIN hr.payment_ref          pmr ON pmr.payment_id = ord.payment_id\\r\\n    JOIN hr.channel_ref          cna ON cna.channel_id = ord.channel_id\\r\\n    JOIN hr.delivery_type_ref    dlv ON ord.delivery_id = dlv.delivery_type_id\\r\\n    JOIN hr.product_toppings_dim   ptd ON orl.product_topping_id = ptd.product_topping_id\\r\\n    JOIN hr.LOCATION_DIM1         loc ON loc.store_location_id = ord.store_location_id\\r\\n    JOIN [hr].[Product_Dim]          prd ON prd.product_id = orl.product_id\\r\\n    JOIN hr.promotion_dim        prm ON prm.promotion_id = orl.promotion_id\\r\\n    JOIN hr.Date_data        dt ON ord.order_date = dt.day_yyyy_mm_dd',",
+				"     format: 'query') ~> source1",
+				"source1 derive(o_Create_User_Date = currentDate()) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          order_line_id as integer,",
+				"          order_id as integer,",
+				"          customer_dim_key as long,",
+				"          payment_ref_key as integer,",
+				"          channel_ref_key as integer,",
+				"          delivery_type_ref_key as integer,",
+				"          product_topping_dim_key as integer,",
+				"          loc_dim_key as integer,",
+				"          Surr_Product_key as integer,",
+				"          promotion_dim_key as integer,",
+				"          date_key as string,",
+				"          order_date as date,",
+				"          order_status as string,",
+				"          quantity as integer,",
+				"          unit_price as decimal(10,2),",
+				"          topping_price as decimal(5,2),",
+				"          promotion_amount as decimal(10,2),",
+				"          DM_create_date as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          order_line_id,",
+				"          order_id,",
+				"          customer_dim_key,",
+				"          payment_ref_key,",
+				"          channel_ref_key,",
+				"          delivery_type_ref_key,",
+				"          product_topping_dim_key,",
+				"          loc_dim_key,",
+				"          Surr_Product_key,",
+				"          promotion_dim_key,",
+				"          date_key,",
+				"          order_date,",
+				"          order_status,",
+				"          quantity,",
+				"          unit_price,",
+				"          topping_price,",
+				"          promotion_amount,",
+				"          DM_create_date = o_Create_User_Date",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"name": "aelidatafactory",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "a64d4ead-c852-4d80-bd60-fb7e2865b985",
+		"tenantId": "efda77cc-66ad-486a-9a38-6947a0bc6bd9"
+	}
+}

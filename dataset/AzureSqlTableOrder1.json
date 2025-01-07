@@ -1,0 +1,66 @@
+{
+	"name": "AzureSqlTableOrder1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ORDER_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ORDER_DATE",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ORDER_STATUS",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TOTAL_AMOUNT",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TOTAL_TAX",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TIPS",
+				"type": "nvarchar"
+			},
+			{
+				"name": "TOTAL_QUANTITY",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DELIVERY_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "CHANNEL_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "STORE_LOCATION_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "CUSTOMER_ID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "PAYMENT_ID",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "Order_1"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

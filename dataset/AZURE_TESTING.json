@@ -1,0 +1,25 @@
+{
+	"name": "AZURE_TESTING",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linkstgGen2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "CUSTOMER_DIM.csv",
+				"folderPath": "TESTING",
+				"fileSystem": "data"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

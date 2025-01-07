@@ -1,0 +1,294 @@
+{
+	"name": "df_Customer_Stg",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "df_Azure_Project_Stg_customer",
+						"type": "DatasetReference"
+					},
+					"name": "sourceCustomer"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_Azure_Project_Stg_email",
+						"type": "DatasetReference"
+					},
+					"name": "sourceEmail"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_Azure_Project_Stg_customer_Address",
+						"type": "DatasetReference"
+					},
+					"name": "sourceCustomerAddress"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_Azure_Project_Stg_customer_phone_number",
+						"type": "DatasetReference"
+					},
+					"name": "sourcePhoneNumber"
+				},
+				{
+					"dataset": {
+						"referenceName": "df_Azure_Project_Stg_Hot_Lovers",
+						"type": "DatasetReference"
+					},
+					"name": "sourceHotLovers"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "df_PizzaProject_Customer_DIM",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "window1"
+				},
+				{
+					"name": "filterpHONEnUMBER"
+				},
+				{
+					"name": "join1"
+				},
+				{
+					"name": "join2"
+				},
+				{
+					"name": "join3"
+				},
+				{
+					"name": "join4"
+				},
+				{
+					"name": "windowEMAIL"
+				},
+				{
+					"name": "filterEMAIL"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "AggreAddress"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "surrogateKey1"
+				},
+				{
+					"name": "select2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CUSTOMER_ID as short,",
+				"          CUSTOMER_FIRST_NAME as string,",
+				"          CUSTOMER_LAST_NAME as string,",
+				"          CUSTOMER_DOB as date,",
+				"          CUSTOMER_TYPE as string,",
+				"          IS_LOYAL as boolean,",
+				"          FIRST_PURCHASE_DATE as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> sourceCustomer",
+				"source(output(",
+				"          CUSTOMER_EMAIL_ID as short,",
+				"          CUSTOMER_EMAIL as string,",
+				"          CUSTOMER_EMAIL_TYPE as string,",
+				"          CUSTOMER_EMAIL_STATUS as string,",
+				"          CUSTOMER_ID as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> sourceEmail",
+				"source(output(",
+				"          CUSTOMER_ADDRESS_ID as short,",
+				"          ADDRESS_LANE1 as string,",
+				"          ADDRESS_LANE_2 as string,",
+				"          CITY_NAME as string,",
+				"          STATE_NAME as string,",
+				"          COUNTRY_NAME as string,",
+				"          ZIP_CODE as integer,",
+				"          GATE_CODE as short,",
+				"          ADDRESS_TYPE as string,",
+				"          ADDRESS_STATUS as string,",
+				"          CUSTOMER_ID as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> sourceCustomerAddress",
+				"source(output(",
+				"          CUSTOMER_PHONE_NUMBER_ID as short,",
+				"          CUSTOMER_PHONE_NUMBER as string,",
+				"          CUSTOMER_PHONE_TYPE as string,",
+				"          CUSTOMER_PHONE_STATUS as string,",
+				"          CUSTOMER_ID as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> sourcePhoneNumber",
+				"source(output(",
+				"          HUT_LOVERS_ID as short,",
+				"          JOINING_DATE as string,",
+				"          IS_ACTIVE as boolean,",
+				"          MEMBER_ID as short,",
+				"          CUSTMOER_ID as short",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> sourceHotLovers",
+				"sourcePhoneNumber window(over(CUSTOMER_ID),",
+				"     desc(CUSTOMER_PHONE_TYPE, true),",
+				"     SecondaryNo = lead(CUSTOMER_PHONE_NUMBER),",
+				"          RN = rowNumber()) ~> window1",
+				"window1 filter(RN==1) ~> filterpHONEnUMBER",
+				"sourceCustomer, filterEMAIL join(sourceCustomer@CUSTOMER_ID == sourceEmail@CUSTOMER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"join1, AggreAddress join(sourceCustomer@CUSTOMER_ID == AggreAddress@CUSTOMER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join2",
+				"join2, filterpHONEnUMBER join(sourceCustomer@CUSTOMER_ID == sourcePhoneNumber@CUSTOMER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join3",
+				"join3, sourceHotLovers join(sourceCustomer@CUSTOMER_ID == CUSTMOER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join4",
+				"sourceEmail window(over(CUSTOMER_ID),",
+				"     asc(CUSTOMER_EMAIL_TYPE, true),",
+				"     Secondary_Email = lead(CUSTOMER_EMAIL),",
+				"          RN = rowNumber()) ~> windowEMAIL",
+				"windowEMAIL filter(RN==1) ~> filterEMAIL",
+				"sourceCustomerAddress derive(o_ADDRESS_LANE1 = iif(ADDRESS_TYPE=='Office',ADDRESS_LANE1,toString(null())),",
+				"          o_ADDRESS_LANE_2 = iif(ADDRESS_TYPE=='Office',ADDRESS_LANE_2,toString(null())),",
+				"          o_CITY_NAME = iif(ADDRESS_TYPE=='Office',CITY_NAME,toString(null())),",
+				"          o_STATE_NAME = iif(ADDRESS_TYPE=='Office',STATE_NAME,toString(null())),",
+				"          o_COUNTRY_NAME = iif(ADDRESS_TYPE=='Office',COUNTRY_NAME,toString(null())),",
+				"          o_ZIP_CODE = iif(ADDRESS_TYPE=='Office',ZIP_CODE,toInteger(null())),",
+				"          o_GATE_CODE = iif(ADDRESS_TYPE=='Office',GATE_CODE,toShort(null())),",
+				"          r_ADDRESS_LANE1 = iif(ADDRESS_TYPE=='Residential',ADDRESS_LANE1,toString(null())),",
+				"          r_ADDRESS_LANE_2 = iif(ADDRESS_TYPE=='Residential',ADDRESS_LANE_2,toString(null())),",
+				"          r_CITY_NAME = iif(ADDRESS_TYPE=='Residential',CITY_NAME,toString(null())),",
+				"          r_STATE_NAME = iif(ADDRESS_TYPE=='Residential',STATE_NAME,toString(null())),",
+				"          r_COUNTRY_NAME = iif(ADDRESS_TYPE=='Residential',COUNTRY_NAME,toString(null())),",
+				"          r_ZIP_CODE = iif(ADDRESS_TYPE=='Residential',ZIP_CODE,toInteger(null())),",
+				"          r_GATE_CODE = iif(ADDRESS_TYPE=='Residential',GATE_CODE,toShort(null()))) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(CUSTOMER_ID),",
+				"     Office_ADDRESS_LANE1 = max(o_ADDRESS_LANE1),",
+				"          Office_ADDRESS_LANE_2 = max(o_ADDRESS_LANE_2),",
+				"          Office_CITY_NAME = max(o_CITY_NAME),",
+				"          Office_STATE_NAME = max(o_STATE_NAME),",
+				"          Office_COUNTRY_NAME = max(o_COUNTRY_NAME),",
+				"          Office_ZIP_CODE = max(o_ZIP_CODE),",
+				"          Office_GATE_CODE = max(o_GATE_CODE),",
+				"          Residential_ADDRESS_LANE1 = max(r_ADDRESS_LANE1),",
+				"          Residential_ADDRESS_LANE_2 = max(r_ADDRESS_LANE_2),",
+				"          Residential_CITY_NAME = max(r_CITY_NAME),",
+				"          Residential_STATE_NAME = max(r_STATE_NAME),",
+				"          Residential_COUNTRY_NAME = max(r_COUNTRY_NAME),",
+				"          Residential_ZIP_CODE = max(r_ZIP_CODE),",
+				"          Residential_GATE_CODE = max(r_GATE_CODE)) ~> AggreAddress",
+				"derivedColumn2 select(mapColumn(",
+				"          CUSTOMER_ID = sourceCustomer@CUSTOMER_ID,",
+				"          CUSTOMER_FIRST_NAME,",
+				"          CUSTOMER_LAST_NAME,",
+				"          IS_LOYAL,",
+				"          CUSTOMER_EMAIL,",
+				"          Secondary_Email,",
+				"          Office_ADDRESS_LANE1,",
+				"          Office_ADDRESS_LANE_2,",
+				"          Office_CITY_NAME,",
+				"          Office_STATE_NAME,",
+				"          Office_COUNTRY_NAME,",
+				"          Office_ZIP_CODE,",
+				"          Office_GATE_CODE,",
+				"          Residential_ADDRESS_LANE1,",
+				"          Residential_ADDRESS_LANE_2,",
+				"          Residential_CITY_NAME,",
+				"          Residential_STATE_NAME,",
+				"          Residential_COUNTRY_NAME,",
+				"          Residential_ZIP_CODE,",
+				"          Residential_GATE_CODE,",
+				"          CUSTOMER_PHONE_NUMBER,",
+				"          SecondaryNo,",
+				"          JOINING_DATE,",
+				"          USER_CREATE_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"join4 derive(USER_CREATE_DATE = currentUTC()) ~> derivedColumn2",
+				"select1 keyGenerate(output(CUSTOMER_DIM_KEY as long),",
+				"     startAt: 1L,",
+				"     stepValue: 1L) ~> surrogateKey1",
+				"surrogateKey1 select(mapColumn(",
+				"          CUSTOMER_DIM_KEY,",
+				"          CUSTOMER_ID,",
+				"          CUSTOMER_FIRST_NAME,",
+				"          CUSTOMER_LAST_NAME,",
+				"          IS_LOYAL,",
+				"          CUSTOMER_EMAIL,",
+				"          Secondary_Email,",
+				"          CUSTOMER_PHONE_NUMBER,",
+				"          SecondaryNo,",
+				"          Office_ADDRESS_LANE1,",
+				"          Office_ADDRESS_LANE_2,",
+				"          Office_CITY_NAME,",
+				"          Office_STATE_NAME,",
+				"          Office_COUNTRY_NAME,",
+				"          Office_ZIP_CODE,",
+				"          Office_GATE_CODE,",
+				"          Residential_ADDRESS_LANE1,",
+				"          Residential_ADDRESS_LANE_2,",
+				"          Residential_CITY_NAME,",
+				"          Residential_STATE_NAME,",
+				"          Residential_COUNTRY_NAME,",
+				"          Residential_ZIP_CODE,",
+				"          Residential_GATE_CODE,",
+				"          JOINING_DATE,",
+				"          USER_CREATE_DATE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     recreate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     preCommands: [],",
+				"     postCommands: []) ~> sink1"
+			]
+		}
+	}
+}

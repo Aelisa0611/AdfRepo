@@ -1,0 +1,17 @@
+{
+	"name": "OracleTableDateData",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Oracle1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "HR",
+			"table": "STG_DATE_DATA"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

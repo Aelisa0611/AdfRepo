@@ -1,0 +1,17 @@
+{
+	"name": "OracleTableOrderLine",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Oracle1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "HR",
+			"table": "STG_ORDER_LINES"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

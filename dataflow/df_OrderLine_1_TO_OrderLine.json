@@ -1,0 +1,88 @@
+{
+	"name": "df_OrderLine_1_TO_OrderLine",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableOrderLine1",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableOrderLine1Sink",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "cast1"
+				},
+				{
+					"name": "select1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          ORDER_LINE_ID as string,",
+				"          UNIT_PRICE as string,",
+				"          QUANTITY as string,",
+				"          PROMOTION_AMOUNT as string,",
+				"          PROMOTION_ID as string,",
+				"          ORDER_ID as string,",
+				"          PRODUCT_ID as string,",
+				"          PRODUCT_TOPPING_ID as string,",
+				"          TOTAL_AMOUNT as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 cast(output(",
+				"          ORDER_LINE_ID as integer,",
+				"          UNIT_PRICE as decimal(10,2),",
+				"          QUANTITY as integer,",
+				"          PROMOTION_AMOUNT as decimal(10,2),",
+				"          PROMOTION_ID as integer,",
+				"          ORDER_ID as integer,",
+				"          PRODUCT_ID as integer,",
+				"          PRODUCT_TOPPING_ID as integer",
+				"     ),",
+				"     errors: true) ~> cast1",
+				"cast1 select(mapColumn(",
+				"          ORDER_LINE_ID,",
+				"          UNIT_PRICE,",
+				"          QUANTITY,",
+				"          PROMOTION_AMOUNT,",
+				"          PROMOTION_ID,",
+				"          ORDER_ID,",
+				"          PRODUCT_ID,",
+				"          PRODUCT_TOPPING_ID",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     recreate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+			]
+		}
+	}
+}

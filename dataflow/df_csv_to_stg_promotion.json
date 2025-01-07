@@ -1,0 +1,73 @@
+{
+	"name": "df_csv_to_stg_promotion",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_stg_PROMOTION",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable_Hr_Stg_Promotion",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          PROMOTION_ID as short,",
+				"          PROMOTION_NAME as string,",
+				"          PROMOTION_TYPE as string,",
+				"          DISCOUNT_AMOUNT as string,",
+				"          START_DATE as string,",
+				"          END_DATE as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 derive(o_start_date = toDate(START_DATE,'MM/dd/yyyy'),",
+				"          o_end_date = toDate(END_DATE,'MM/dd/yyyy'),",
+				"          o_discount_price = toDecimal(replace(DISCOUNT_AMOUNT,'%',''), 5, 2)) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Promotion_ID as integer,",
+				"          Promotion_Name as string,",
+				"          Promotion_Type as string,",
+				"          Discount_amount as decimal(5,2),",
+				"          START_DATE as date,",
+				"          END_DATE as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Promotion_ID = PROMOTION_ID,",
+				"          Promotion_Name = PROMOTION_NAME,",
+				"          Promotion_Type = PROMOTION_TYPE,",
+				"          Discount_amount = o_discount_price,",
+				"          START_DATE = o_start_date,",
+				"          END_DATE = o_end_date",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

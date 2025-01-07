@@ -1,0 +1,166 @@
+{
+	"name": "df_lOCATION_DIM_SCD2_copy1",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "df_pizzaproject_Location_DIM",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+						"type": "DatasetReference"
+					},
+					"name": "sinkinsert"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filterinsert"
+				},
+				{
+					"name": "filterUPDATE"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {Location_Dim_Key } as long,",
+				"          STORE_LOCATION_ID as short,",
+				"          STORE_NAME as string,",
+				"          STORE_ADDRESS as string,",
+				"          STORE_PHONE_NUMBER as string,",
+				"          STORE_OPEN_TIME as string,",
+				"          STORE_CLOSE_TIME as string,",
+				"          STATE_NAME as string,",
+				"          STATE_COUNTRY as string,",
+				"          CREATE_USER_DATE as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source(output(",
+				"          Loc_Dim_Key as integer,",
+				"          Store_Location_ID as integer,",
+				"          Store_Name as string,",
+				"          Store_Address as string,",
+				"          Store_Open_Time as string,",
+				"          Store_Close_Time as string,",
+				"          State_Name as string,",
+				"          FLAG as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'select * from  HR.LOCATION_DIM1 where Flag = \\'Active\\'',",
+				"     format: 'query') ~> source2",
+				"derivedColumn1 filter(isNull(source2@Store_Location_ID) || src_md5 != tgt_md5) ~> filterinsert",
+				"derivedColumn1 filter(!isNull(source2@Store_Location_ID) && src_md5 != tgt_md5) ~> filterUPDATE",
+				"filterUPDATE alterRow(updateIf(1==1)) ~> alterRow1",
+				"source1, source2 lookup(source1@STORE_LOCATION_ID == source2@Store_Location_ID,",
+				"     multiple: true,",
+				"     broadcast: 'auto',",
+				"     pickup: 'any')~> lookup1",
+				"lookup1 derive(o_create_date = currentDate(),",
+				"          Flag_Active = 'Active',",
+				"          Flag_Inactive = 'InActive',",
+				"          src_md5 = md5(concat(source1@STORE_NAME,source1@STORE_ADDRESS,source1@STORE_OPEN_TIME,source1@STORE_CLOSE_TIME,source1@STATE_NAME)),",
+				"          tgt_md5 = md5(concat(source2@Store_Name, source2@Store_Address,source2@Store_Open_Time,source2@Store_Close_Time,source2@State_Name))) ~> derivedColumn1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Loc_Dim_Key as integer,",
+				"          Store_Location_ID as integer,",
+				"          Store_Name as string,",
+				"          Store_Address as string,",
+				"          Store_Open_Time as string,",
+				"          Store_Close_Time as string,",
+				"          State_Name as string,",
+				"          FLAG as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['Loc_Dim_Key'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Loc_Dim_Key,",
+				"          FLAG = Flag_Inactive,",
+				"          DM_CREATE_DATE = CREATE_USER_DATE",
+				"     )) ~> sink1",
+				"filterinsert sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Loc_Dim_Key as integer,",
+				"          Store_Location_ID as integer,",
+				"          Store_Name as string,",
+				"          Store_Address as string,",
+				"          Store_Open_Time as string,",
+				"          Store_Close_Time as string,",
+				"          State_Name as string,",
+				"          FLAG as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Store_Location_ID = source1@STORE_LOCATION_ID,",
+				"          Store_Name = source1@STORE_NAME,",
+				"          Store_Address = source1@STORE_ADDRESS,",
+				"          Store_Open_Time = source1@STORE_OPEN_TIME,",
+				"          Store_Close_Time = source1@STORE_CLOSE_TIME,",
+				"          State_Name = source1@STATE_NAME,",
+				"          FLAG = Flag_Active,",
+				"          DM_CREATE_DATE = o_create_date",
+				"     )) ~> sinkinsert"
+			]
+		}
+	}
+}

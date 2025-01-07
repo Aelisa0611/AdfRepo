@@ -1,0 +1,81 @@
+{
+	"name": "df_customer_review_FACT",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableCustReviewStg",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTablecustomer_review_FACT",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customer_dim_key as long,",
+				"          loc_dim_key as integer,",
+				"          date_key as string,",
+				"          order_id as integer,",
+				"          feedback as string,",
+				"          feedback_date as date,",
+				"          recomended as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'SELECT\\n    cust.customer_dim_key,\\n    loc.loc_dim_key,\\n    dt.date_key,\\n    csr.order_id,\\n    csr.feedback,\\n    csr.feedback_date,\\n    csr.recomended\\nFROM\\n         hr.stg_customer_review csr\\n    JOIN [hr].[Order]   ord ON csr.order_id = ord.order_id\\n    JOIN hr.CUSTOMER_DIM  cust ON csr.customer_id = cust.customer_id\\n    JOIN [hr].[LOCATION_DIM1] loc ON ord.store_location_id = loc.store_location_id\\n    JOIN hr.Date_data dt ON csr.feedback_date = dt.day_yyyy_mm_dd',",
+				"     format: 'query') ~> source1",
+				"source1 derive(o_Create_Date = currentDate()) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          customer_dim_key as long,",
+				"          loc_dim_key as integer,",
+				"          date_key as string,",
+				"          order_id as integer,",
+				"          feedback as string,",
+				"          feedback_date as date,",
+				"          recomended as string,",
+				"          DM_create_date as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          customer_dim_key,",
+				"          loc_dim_key,",
+				"          date_key,",
+				"          order_id,",
+				"          feedback,",
+				"          feedback_date,",
+				"          recomended,",
+				"          DM_create_date = o_Create_Date",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

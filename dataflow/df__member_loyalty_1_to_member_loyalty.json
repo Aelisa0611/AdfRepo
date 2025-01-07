@@ -1,0 +1,82 @@
+{
+	"name": "df__member_loyalty_1_to_member_loyalty",
+	"properties": {
+		"description": "we are transfering the data type we don't need all as a varchar or string so we can change data type",
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTablemember_loyalty",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableMemberLoyalty",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "cast1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          MEMBER_ID as string,",
+				"          ORDER_DATE as string,",
+				"          INITIAL_POINTS_RECEIVED_DATE as string,",
+				"          INITIAL_REWARD_POINTS as string,",
+				"          LAST_EARNED_POINTS as string,",
+				"          TOTAL_POINTS_EARNED as string,",
+				"          REMAINING_POINTS as string,",
+				"          IS_ACTIVE as string,",
+				"          STORE_LOCATION_ID as string,",
+				"          ORDER_ID as string,",
+				"          TOTAL_AMOUNT as string,",
+				"          HUT_LOVER_ID as string,",
+				"          CUSTOMER_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 cast(output(",
+				"          MEMBER_ID as integer,",
+				"          ORDER_DATE as date 'MM/dd/yyyy',",
+				"          INITIAL_POINTS_RECEIVED_DATE as date 'MM/dd/yyyy',",
+				"          INITIAL_REWARD_POINTS as integer,",
+				"          LAST_EARNED_POINTS as integer,",
+				"          TOTAL_POINTS_EARNED as integer,",
+				"          REMAINING_POINTS as integer,",
+				"          STORE_LOCATION_ID as integer,",
+				"          ORDER_ID as integer,",
+				"          TOTAL_AMOUNT as decimal(10,2),",
+				"          HUT_LOVER_ID as integer,",
+				"          CUSTOMER_ID as integer",
+				"     ),",
+				"     errors: true) ~> cast1",
+				"cast1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     recreate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+			]
+		}
+	}
+}

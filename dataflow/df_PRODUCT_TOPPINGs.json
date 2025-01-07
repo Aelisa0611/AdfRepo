@@ -1,0 +1,172 @@
+{
+	"name": "df_PRODUCT_TOPPINGs",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dt_STG_PRODUCT_TOPPINGS_csv",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable_PRODUCT_TOPPINGS_dim",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable_PRODUCT_TOPPINGS_dim",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTable_PRODUCT_TOPPINGS_dim",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "select1"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "filterInsert"
+				},
+				{
+					"name": "filterupdate"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          PRODUCT_TOPPING_ID as short,",
+				"          TOPPING_NAME as string,",
+				"          TOPING_PRICE as string,",
+				"          IS_ACTIVE as boolean",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source(output(",
+				"          Product_Topping_Dim_Key as integer,",
+				"          Product_Topping_ID as integer,",
+				"          Topping_Name as string,",
+				"          Topping_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          Effective_Date as date,",
+				"          END_DATE as date,",
+				"          Flag as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'select * from  hr.PRODUCT_TOPPINGS_DIM where Flag = \\'Y\\'',",
+				"     format: 'query') ~> source2",
+				"source1 select(mapColumn(",
+				"          src_PRODUCT_TOPPING_ID = PRODUCT_TOPPING_ID,",
+				"          src_TOPPING_NAME = TOPPING_NAME,",
+				"          src_TOPING_PRICE = TOPING_PRICE,",
+				"          src_IS_ACTIVE = IS_ACTIVE",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1, source2 lookup(src_PRODUCT_TOPPING_ID == Product_Topping_ID,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1 derive(src_md5 = md5(concat(toString(replace(src_TOPING_PRICE, '$', '')), src_TOPPING_NAME)),",
+				"          tgt_md5 = md5(concat(toString(Topping_Price), Topping_Name)),",
+				"          o_DM_create_Date = currentDate(),",
+				"          o_Effective_date = currentDate(),",
+				"          o_End_Date = currentDate(),",
+				"          Active_Flag = 'Y',",
+				"          InActive_Flag = 'N',",
+				"          src_TOPING_PRICE = toString(replace(src_TOPING_PRICE, '$', ''))) ~> derivedColumn1",
+				"derivedColumn1 filter(isNull(Product_Topping_ID) || src_md5 != tgt_md5) ~> filterInsert",
+				"derivedColumn1 filter(!isNull(Product_Topping_ID) && src_md5 != tgt_md5) ~> filterupdate",
+				"filterupdate alterRow(updateIf(1==1)) ~> alterRow1",
+				"filterInsert sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Product_Topping_Dim_Key as integer,",
+				"          Product_Topping_ID as integer,",
+				"          Topping_Name as string,",
+				"          Topping_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          Effective_Date as date,",
+				"          END_DATE as date,",
+				"          Flag as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Product_Topping_ID = src_PRODUCT_TOPPING_ID,",
+				"          Topping_Name = src_TOPPING_NAME,",
+				"          Topping_Price = src_TOPING_PRICE,",
+				"          Is_Active = src_IS_ACTIVE,",
+				"          Effective_Date = o_Effective_date,",
+				"          Flag = Active_Flag,",
+				"          DM_CREATE_DATE = o_DM_create_Date",
+				"     )) ~> sink1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Product_Topping_Dim_Key as integer,",
+				"          Product_Topping_ID as integer,",
+				"          Topping_Name as string,",
+				"          Topping_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          Effective_Date as date,",
+				"          END_DATE as date,",
+				"          Flag as string,",
+				"          DM_CREATE_DATE as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['Product_Topping_Dim_Key'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Product_Topping_Dim_Key,",
+				"          END_DATE = o_End_Date,",
+				"          Flag = InActive_Flag",
+				"     )) ~> sink2"
+			]
+		}
+	}
+}

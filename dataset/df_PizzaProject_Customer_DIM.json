@@ -1,0 +1,17 @@
+{
+	"name": "df_PizzaProject_Customer_DIM",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "CUSTOMER_DIM"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

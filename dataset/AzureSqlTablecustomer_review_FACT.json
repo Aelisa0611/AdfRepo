@@ -1,0 +1,53 @@
+{
+	"name": "AzureSqlTablecustomer_review_FACT",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "customer_dim_key",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "loc_dim_key",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "date_key",
+				"type": "nvarchar"
+			},
+			{
+				"name": "order_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "feedback",
+				"type": "nvarchar"
+			},
+			{
+				"name": "feedback_date",
+				"type": "date"
+			},
+			{
+				"name": "recomended",
+				"type": "nvarchar"
+			},
+			{
+				"name": "DM_create_date",
+				"type": "date"
+			}
+		],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "customer_review_FACT"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

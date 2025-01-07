@@ -1,0 +1,244 @@
+{
+	"name": "df_Product_Dim_copy",
+	"properties": {
+		"folder": {
+			"name": "pizzaproject"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableProduct",
+						"type": "DatasetReference"
+					},
+					"name": "sourceHrProductCopy"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRProductDimCopy",
+						"type": "DatasetReference"
+					},
+					"name": "sourceHrProductDimCopy"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRProductDimCopy",
+						"type": "DatasetReference"
+					},
+					"name": "Insertsink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTableHRProductDimCopy",
+						"type": "DatasetReference"
+					},
+					"name": "sinkUpdate"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "filterInsert"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "filterUpdate"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow2"
+				},
+				{
+					"name": "derivedColumn5"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          PRODUCT_DIM_KEY as long,",
+				"          PRODUCT_ID as short,",
+				"          PRODUCT_NAME as string,",
+				"          PRODUCT_PRICE as string,",
+				"          PRODUCT_DESCRIPTION as string,",
+				"          IS_ACTIVE as string,",
+				"          PRODUCT_SUBCATEGORY_ID as short,",
+				"          PRODUCT_SUBCATEGORY_NAME as string,",
+				"          PRODUCT_SIZE as string,",
+				"          PRODUCT_CATEGORY_ID as short,",
+				"          PRODUCT_CATEGORY_NAME as string,",
+				"          CREATE_USER_DATE as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> sourceHrProductCopy",
+				"source(output(",
+				"          Surr_Product_kEY as integer,",
+				"          Product_ID as integer,",
+				"          Product_Name as string,",
+				"          Product_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          PRODUCT_CATEGORY_ID as string,",
+				"          Product_Category_Name as string,",
+				"          Product_SubCategory_ID as integer,",
+				"          Product_SubCategory_Name as string,",
+				"          Product_Size as string,",
+				"          Product_Description as string,",
+				"          Eff_Start_Date as date,",
+				"          Eff_End_Date as date,",
+				"          DM_CREATE_DATE as date,",
+				"          Flag as integer,",
+				"          MD5_Checksum as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'select * from hr.Product_Dim_copy where Flag =1',",
+				"     format: 'query') ~> sourceHrProductDimCopy",
+				"sourceHrProductCopy filter(IS_ACTIVE == 'Active') ~> filter1",
+				"filter1 derive(src_md5 = md5(concat(PRODUCT_NAME,PRODUCT_PRICE,PRODUCT_DESCRIPTION,toString(PRODUCT_SUBCATEGORY_ID),PRODUCT_SUBCATEGORY_NAME,PRODUCT_SIZE,PRODUCT_CATEGORY_NAME,toString(PRODUCT_CATEGORY_ID)))) ~> derivedColumn1",
+				"derivedColumn1, sourceHrProductDimCopy lookup(sourceHrProductCopy@PRODUCT_ID == sourceHrProductDimCopy@Product_ID,",
+				"     multiple: true,",
+				"     broadcast: 'auto')~> lookup1",
+				"derivedColumn5 filter(Flag_I_U == 'insert' || Flag_I_U == 'update') ~> filterInsert",
+				"filterInsert select(mapColumn(",
+				"          PRODUCT_ID = sourceHrProductCopy@PRODUCT_ID,",
+				"          PRODUCT_NAME = sourceHrProductCopy@PRODUCT_NAME,",
+				"          PRODUCT_PRICE = sourceHrProductCopy@PRODUCT_PRICE,",
+				"          PRODUCT_DESCRIPTION = sourceHrProductCopy@PRODUCT_DESCRIPTION,",
+				"          IS_ACTIVE = sourceHrProductCopy@IS_ACTIVE,",
+				"          PRODUCT_SUBCATEGORY_ID = sourceHrProductCopy@PRODUCT_SUBCATEGORY_ID,",
+				"          PRODUCT_SUBCATEGORY_NAME = sourceHrProductCopy@PRODUCT_SUBCATEGORY_NAME,",
+				"          PRODUCT_SIZE = sourceHrProductCopy@PRODUCT_SIZE,",
+				"          PRODUCT_CATEGORY_ID = sourceHrProductCopy@PRODUCT_CATEGORY_ID,",
+				"          PRODUCT_CATEGORY_NAME = sourceHrProductCopy@PRODUCT_CATEGORY_NAME,",
+				"          src_md5,",
+				"          Flag_I_U,",
+				"          ActiveFlag,",
+				"          o_EFF_Date,",
+				"          o_End_Date,",
+				"          o_DM_User_Date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 alterRow(insertIf(Flag_I_U=='insert'||Flag_I_U=='update')) ~> alterRow1",
+				"derivedColumn5 filter(Flag_I_U == 'update') ~> filterUpdate",
+				"filterUpdate select(mapColumn(",
+				"          Surr_Product_kEY,",
+				"          Flag_I_U,",
+				"          InActiveFlag,",
+				"          o_EFF_Date,",
+				"          o_DM_User_Date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(updateIf(Flag_I_U=='update')) ~> alterRow2",
+				"lookup1 derive(o_DM_User_Date = currentUTC(),",
+				"          Flag_I_U = iif(isNull(Surr_Product_kEY), 'insert', iif(src_md5 != MD5_Checksum, 'update','nc')),",
+				"          ActiveFlag = 1,",
+				"          InActiveFlag = 0,",
+				"          o_EFF_Date = currentUTC(),",
+				"          o_End_Date = toDate('12/31/9999', 'MM/dd/yyyy', 'en-US')) ~> derivedColumn5",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Surr_Product_kEY as integer,",
+				"          Product_ID as integer,",
+				"          Product_Name as string,",
+				"          Product_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          PRODUCT_CATEGORY_ID as string,",
+				"          Product_Category_Name as string,",
+				"          Product_SubCategory_ID as integer,",
+				"          Product_SubCategory_Name as string,",
+				"          Product_Size as string,",
+				"          Product_Description as string,",
+				"          Eff_Start_Date as date,",
+				"          Eff_End_Date as date,",
+				"          DM_CREATE_DATE as date,",
+				"          Flag as integer,",
+				"          MD5_Checksum as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Product_ID = PRODUCT_ID,",
+				"          Product_Name = PRODUCT_NAME,",
+				"          Product_Price = PRODUCT_PRICE,",
+				"          Is_Active = IS_ACTIVE,",
+				"          PRODUCT_CATEGORY_ID,",
+				"          Product_Category_Name = PRODUCT_CATEGORY_NAME,",
+				"          Product_SubCategory_ID = PRODUCT_SUBCATEGORY_ID,",
+				"          Product_SubCategory_Name = PRODUCT_SUBCATEGORY_NAME,",
+				"          Product_Size = PRODUCT_SIZE,",
+				"          Product_Description = PRODUCT_DESCRIPTION,",
+				"          Eff_Start_Date = o_EFF_Date,",
+				"          Eff_End_Date = o_End_Date,",
+				"          DM_CREATE_DATE = o_DM_User_Date,",
+				"          Flag = ActiveFlag,",
+				"          MD5_Checksum = src_md5",
+				"     )) ~> Insertsink1",
+				"alterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Surr_Product_kEY as integer,",
+				"          Product_ID as integer,",
+				"          Product_Name as string,",
+				"          Product_Price as decimal(5,2),",
+				"          Is_Active as string,",
+				"          PRODUCT_CATEGORY_ID as string,",
+				"          Product_Category_Name as string,",
+				"          Product_SubCategory_ID as integer,",
+				"          Product_SubCategory_Name as string,",
+				"          Product_Size as string,",
+				"          Product_Description as string,",
+				"          Eff_Start_Date as date,",
+				"          Eff_End_Date as date,",
+				"          DM_CREATE_DATE as date,",
+				"          Flag as integer,",
+				"          MD5_Checksum as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['Surr_Product_kEY'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Surr_Product_kEY,",
+				"          Eff_End_Date = o_EFF_Date,",
+				"          DM_CREATE_DATE = o_DM_User_Date,",
+				"          Flag = InActiveFlag",
+				"     )) ~> sinkUpdate"
+			]
+		}
+	}
+}

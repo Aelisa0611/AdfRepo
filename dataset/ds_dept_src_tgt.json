@@ -1,0 +1,56 @@
+{
+	"name": "ds_dept_src_tgt",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "linkstgGen2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileSystem": "aelisa"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "FIRST_NAME",
+				"type": "String"
+			},
+			{
+				"name": "DEPARTMENT_ID",
+				"type": "String"
+			},
+			{
+				"name": "SALARY",
+				"type": "String"
+			},
+			{
+				"name": "min_salary",
+				"type": "String"
+			},
+			{
+				"name": "max_salary",
+				"type": "String"
+			},
+			{
+				"name": "avg_salary",
+				"type": "String"
+			},
+			{
+				"name": "sum_salary",
+				"type": "String"
+			},
+			{
+				"name": "count_dept_id",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

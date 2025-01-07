@@ -1,0 +1,17 @@
+{
+	"name": "AzureSqlTableDateData",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "hr",
+			"table": "Date_Data"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
