@@ -1,6 +1,7 @@
 {
 	"name": "df_Customer_Stg",
 	"properties": {
+		"description": "we have window and filter for the columns we can change some column change",
 		"folder": {
 			"name": "pizzaproject"
 		},
