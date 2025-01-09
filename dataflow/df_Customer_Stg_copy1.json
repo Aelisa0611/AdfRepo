@@ -1,6 +1,7 @@
 {
 	"name": "df_Customer_Stg_copy1",
 	"properties": {
+		"description": "we can do here mapping with derived column and aggregator",
 		"folder": {
 			"name": "pizzaproject"
 		},

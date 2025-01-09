@@ -1,6 +1,7 @@
 {
 	"name": "df_Customer_Stg",
 	"properties": {
+		"description": "we have window and filter for the columns we can change some column change",
 		"folder": {
 			"name": "pizzaproject"
 		},
@@ -286,6 +287,33 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          CUSTOMER_DIM_KEY,",
+				"          CUSTOMER_ID,",
+				"          CUSTOMER_FIRST_NAME,",
+				"          CUSTOMER_LAST_NAME,",
+				"          IS_LOYAL,",
+				"          CUSTOMER_EMAIL,",
+				"          Secondary_Email,",
+				"          CUSTOMER_PHONE_NUMBER,",
+				"          SecondaryNo,",
+				"          Office_ADDRESS_LANE1,",
+				"          Office_ADDRESS_LANE_2,",
+				"          Office_CITY_NAME,",
+				"          Office_STATE_NAME,",
+				"          Office_COUNTRY_NAME,",
+				"          Office_ZIP_CODE,",
+				"          Office_GATE_CODE,",
+				"          Residential_ADDRESS_LANE1,",
+				"          Residential_ADDRESS_LANE_2,",
+				"          Residential_CITY_NAME,",
+				"          Residential_STATE_NAME,",
+				"          Residential_COUNTRY_NAME,",
+				"          Residential_ZIP_CODE,",
+				"          Residential_GATE_CODE,",
+				"          JOINING_DATE,",
+				"          USER_CREATE_DATE",
+				"     ),",
 				"     preCommands: [],",
 				"     postCommands: []) ~> sink1"
 			]
