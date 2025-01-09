@@ -1,0 +1,2832 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "aelidatafactory"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/df_Product_Dim')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableProduct",
+								"type": "DatasetReference"
+							},
+							"name": "sourceHrProduct"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSourceHrProductDim",
+								"type": "DatasetReference"
+							},
+							"name": "sourceHrProductDim"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSourceHrProductDim",
+								"type": "DatasetReference"
+							},
+							"name": "Insertsink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSourceHrProductDim",
+								"type": "DatasetReference"
+							},
+							"name": "sinkUpdate"
+						}
+					],
+					"transformations": [
+						{
+							"name": "filter1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "derivedColumn2"
+						},
+						{
+							"name": "lookup1"
+						},
+						{
+							"name": "filterInsert"
+						},
+						{
+							"name": "derivedColumn3"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "filterUpdate"
+						},
+						{
+							"name": "derivedColumn4"
+						},
+						{
+							"name": "select2"
+						},
+						{
+							"name": "alterRow2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          PRODUCT_DIM_KEY as long,",
+						"          PRODUCT_ID as short,",
+						"          PRODUCT_NAME as string,",
+						"          PRODUCT_PRICE as string,",
+						"          PRODUCT_DESCRIPTION as string,",
+						"          IS_ACTIVE as string,",
+						"          PRODUCT_SUBCATEGORY_ID as short,",
+						"          PRODUCT_SUBCATEGORY_NAME as string,",
+						"          PRODUCT_SIZE as string,",
+						"          PRODUCT_CATEGORY_ID as short,",
+						"          PRODUCT_CATEGORY_NAME as string,",
+						"          CREATE_USER_DATE as timestamp",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> sourceHrProduct",
+						"source(output(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'select * from hr.Product_Dim where Eff_End_Date IS NULL',",
+						"     format: 'query') ~> sourceHrProductDim",
+						"sourceHrProduct filter(IS_ACTIVE == 'Active') ~> filter1",
+						"filter1 derive(src_md5 = md5(concat(PRODUCT_NAME,PRODUCT_PRICE,PRODUCT_DESCRIPTION,toString(PRODUCT_SUBCATEGORY_ID),PRODUCT_SUBCATEGORY_NAME,PRODUCT_SIZE,PRODUCT_CATEGORY_NAME,toString(PRODUCT_CATEGORY_ID)))) ~> derivedColumn1",
+						"sourceHrProductDim derive(tgt_MD5 = md5(\r",
+						"  concat(\r",
+						"    Product_Name,toString(Product_Price),Product_Description,\r",
+						"    toString(Product_SubCategory_ID),Product_SubCategory_Name,\r",
+						"    Product_Size,Product_Category_Name,\r",
+						"    toString(PRODUCT_CATEGORY_ID)\r",
+						"  )\r",
+						")) ~> derivedColumn2",
+						"derivedColumn1, derivedColumn2 lookup(sourceHrProduct@PRODUCT_ID == sourceHrProductDim@Product_ID,",
+						"     multiple: true,",
+						"     broadcast: 'auto')~> lookup1",
+						"lookup1 filter(isNull(Surr_Product_kEY) || src_md5 != tgt_MD5) ~> filterInsert",
+						"filterInsert derive(o_Date = currentDate(),",
+						"          dm_Date = currentDate()) ~> derivedColumn3",
+						"derivedColumn3 select(mapColumn(",
+						"          PRODUCT_ID = sourceHrProduct@PRODUCT_ID,",
+						"          PRODUCT_NAME = sourceHrProduct@PRODUCT_NAME,",
+						"          PRODUCT_PRICE = sourceHrProduct@PRODUCT_PRICE,",
+						"          PRODUCT_DESCRIPTION = sourceHrProduct@PRODUCT_DESCRIPTION,",
+						"          IS_ACTIVE = sourceHrProduct@IS_ACTIVE,",
+						"          PRODUCT_SUBCATEGORY_ID = sourceHrProduct@PRODUCT_SUBCATEGORY_ID,",
+						"          PRODUCT_SUBCATEGORY_NAME = sourceHrProduct@PRODUCT_SUBCATEGORY_NAME,",
+						"          PRODUCT_SIZE = sourceHrProduct@PRODUCT_SIZE,",
+						"          PRODUCT_CATEGORY_ID = sourceHrProduct@PRODUCT_CATEGORY_ID,",
+						"          PRODUCT_CATEGORY_NAME = sourceHrProduct@PRODUCT_CATEGORY_NAME,",
+						"          o_Date,",
+						"          dm_Date",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"lookup1 filter(src_md5 != tgt_MD5) ~> filterUpdate",
+						"filterUpdate derive(o_Date = currentDate()) ~> derivedColumn4",
+						"derivedColumn4 select(mapColumn(",
+						"          Surr_Product_kEY,",
+						"          o_Date",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select2",
+						"select2 alterRow(updateIf(1==1)) ~> alterRow2",
+						"select1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 1,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Product_ID = PRODUCT_ID,",
+						"          Product_Name = PRODUCT_NAME,",
+						"          Product_Price = PRODUCT_PRICE,",
+						"          Is_Active = IS_ACTIVE,",
+						"          PRODUCT_CATEGORY_ID,",
+						"          Product_Category_Name = PRODUCT_CATEGORY_NAME,",
+						"          Product_SubCategory_ID = PRODUCT_SUBCATEGORY_ID,",
+						"          Product_SubCategory_Name = PRODUCT_SUBCATEGORY_NAME,",
+						"          Product_Size = PRODUCT_SIZE,",
+						"          Product_Description = PRODUCT_DESCRIPTION,",
+						"          Eff_Start_Date = o_Date,",
+						"          DM_CREATE_DATE = dm_Date",
+						"     )) ~> Insertsink1",
+						"alterRow2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:true,",
+						"     upsertable:false,",
+						"     keys:['Surr_Product_kEY'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Surr_Product_kEY,",
+						"          Eff_End_Date = o_Date,",
+						"          DM_CREATE_DATE = o_Date",
+						"     )) ~> sinkUpdate"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_Product_Dim_copy')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableProduct",
+								"type": "DatasetReference"
+							},
+							"name": "sourceHrProductCopy"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRProductDimCopy",
+								"type": "DatasetReference"
+							},
+							"name": "sourceHrProductDimCopy"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRProductDimCopy",
+								"type": "DatasetReference"
+							},
+							"name": "Insertsink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRProductDimCopy",
+								"type": "DatasetReference"
+							},
+							"name": "sinkUpdate"
+						}
+					],
+					"transformations": [
+						{
+							"name": "filter1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "lookup1"
+						},
+						{
+							"name": "filterInsert"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "alterRow1"
+						},
+						{
+							"name": "filterUpdate"
+						},
+						{
+							"name": "select2"
+						},
+						{
+							"name": "alterRow2"
+						},
+						{
+							"name": "derivedColumn5"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          PRODUCT_DIM_KEY as long,",
+						"          PRODUCT_ID as short,",
+						"          PRODUCT_NAME as string,",
+						"          PRODUCT_PRICE as string,",
+						"          PRODUCT_DESCRIPTION as string,",
+						"          IS_ACTIVE as string,",
+						"          PRODUCT_SUBCATEGORY_ID as short,",
+						"          PRODUCT_SUBCATEGORY_NAME as string,",
+						"          PRODUCT_SIZE as string,",
+						"          PRODUCT_CATEGORY_ID as short,",
+						"          PRODUCT_CATEGORY_NAME as string,",
+						"          CREATE_USER_DATE as timestamp",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> sourceHrProductCopy",
+						"source(output(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date,",
+						"          Flag as integer,",
+						"          MD5_Checksum as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'select * from hr.Product_Dim_copy where Flag =1',",
+						"     format: 'query') ~> sourceHrProductDimCopy",
+						"sourceHrProductCopy filter(IS_ACTIVE == 'Active') ~> filter1",
+						"filter1 derive(src_md5 = md5(concat(PRODUCT_NAME,PRODUCT_PRICE,PRODUCT_DESCRIPTION,toString(PRODUCT_SUBCATEGORY_ID),PRODUCT_SUBCATEGORY_NAME,PRODUCT_SIZE,PRODUCT_CATEGORY_NAME,toString(PRODUCT_CATEGORY_ID)))) ~> derivedColumn1",
+						"derivedColumn1, sourceHrProductDimCopy lookup(sourceHrProductCopy@PRODUCT_ID == sourceHrProductDimCopy@Product_ID,",
+						"     multiple: true,",
+						"     broadcast: 'auto')~> lookup1",
+						"derivedColumn5 filter(Flag_I_U == 'insert' || Flag_I_U == 'update') ~> filterInsert",
+						"filterInsert select(mapColumn(",
+						"          PRODUCT_ID = sourceHrProductCopy@PRODUCT_ID,",
+						"          PRODUCT_NAME = sourceHrProductCopy@PRODUCT_NAME,",
+						"          PRODUCT_PRICE = sourceHrProductCopy@PRODUCT_PRICE,",
+						"          PRODUCT_DESCRIPTION = sourceHrProductCopy@PRODUCT_DESCRIPTION,",
+						"          IS_ACTIVE = sourceHrProductCopy@IS_ACTIVE,",
+						"          PRODUCT_SUBCATEGORY_ID = sourceHrProductCopy@PRODUCT_SUBCATEGORY_ID,",
+						"          PRODUCT_SUBCATEGORY_NAME = sourceHrProductCopy@PRODUCT_SUBCATEGORY_NAME,",
+						"          PRODUCT_SIZE = sourceHrProductCopy@PRODUCT_SIZE,",
+						"          PRODUCT_CATEGORY_ID = sourceHrProductCopy@PRODUCT_CATEGORY_ID,",
+						"          PRODUCT_CATEGORY_NAME = sourceHrProductCopy@PRODUCT_CATEGORY_NAME,",
+						"          src_md5,",
+						"          Flag_I_U,",
+						"          ActiveFlag,",
+						"          o_EFF_Date,",
+						"          o_End_Date,",
+						"          o_DM_User_Date",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"select1 alterRow(insertIf(Flag_I_U=='insert'||Flag_I_U=='update')) ~> alterRow1",
+						"derivedColumn5 filter(Flag_I_U == 'update') ~> filterUpdate",
+						"filterUpdate select(mapColumn(",
+						"          Surr_Product_kEY,",
+						"          Flag_I_U,",
+						"          InActiveFlag,",
+						"          o_EFF_Date,",
+						"          o_DM_User_Date",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select2",
+						"select2 alterRow(updateIf(Flag_I_U=='update')) ~> alterRow2",
+						"lookup1 derive(o_DM_User_Date = currentUTC(),",
+						"          Flag_I_U = iif(isNull(Surr_Product_kEY), 'insert', iif(src_md5 != MD5_Checksum, 'update','nc')),",
+						"          ActiveFlag = 1,",
+						"          InActiveFlag = 0,",
+						"          o_EFF_Date = currentUTC(),",
+						"          o_End_Date = toDate('12/31/9999', 'MM/dd/yyyy', 'en-US')) ~> derivedColumn5",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date,",
+						"          Flag as integer,",
+						"          MD5_Checksum as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 1,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Product_ID = PRODUCT_ID,",
+						"          Product_Name = PRODUCT_NAME,",
+						"          Product_Price = PRODUCT_PRICE,",
+						"          Is_Active = IS_ACTIVE,",
+						"          PRODUCT_CATEGORY_ID,",
+						"          Product_Category_Name = PRODUCT_CATEGORY_NAME,",
+						"          Product_SubCategory_ID = PRODUCT_SUBCATEGORY_ID,",
+						"          Product_SubCategory_Name = PRODUCT_SUBCATEGORY_NAME,",
+						"          Product_Size = PRODUCT_SIZE,",
+						"          Product_Description = PRODUCT_DESCRIPTION,",
+						"          Eff_Start_Date = o_EFF_Date,",
+						"          Eff_End_Date = o_End_Date,",
+						"          DM_CREATE_DATE = o_DM_User_Date,",
+						"          Flag = ActiveFlag,",
+						"          MD5_Checksum = src_md5",
+						"     )) ~> Insertsink1",
+						"alterRow2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date,",
+						"          Flag as integer,",
+						"          MD5_Checksum as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:true,",
+						"     upsertable:false,",
+						"     keys:['Surr_Product_kEY'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Surr_Product_kEY,",
+						"          Eff_End_Date = o_EFF_Date,",
+						"          DM_CREATE_DATE = o_DM_User_Date,",
+						"          Flag = InActiveFlag",
+						"     )) ~> sinkUpdate"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_Sales_Fact_Query')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "df_PizzaProject_Customer_DIM",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSalesFact",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          order_line_id as integer,",
+						"          order_id as integer,",
+						"          customer_dim_key as long,",
+						"          payment_ref_key as integer,",
+						"          channel_ref_key as integer,",
+						"          delivery_type_ref_key as integer,",
+						"          product_topping_dim_key as integer,",
+						"          loc_dim_key as integer,",
+						"          Surr_Product_key as integer,",
+						"          promotion_dim_key as integer,",
+						"          date_key as string,",
+						"          order_date as date,",
+						"          order_status as string,",
+						"          quantity as integer,",
+						"          unit_price as decimal(10,2),",
+						"          topping_price as decimal(5,2),",
+						"          promotion_amount as decimal(10,2)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'SELECT\\r\\n    orl.order_line_id as order_line_id,\\r\\n    ord.order_id as order_id,\\r\\n    cust.customer_dim_key as customer_dim_key,\\r\\n    pmr.payment_ref_key as payment_ref_key,\\r\\n    cna.channel_ref_key as channel_ref_key,\\r\\n    dlv.delivery_type_ref_key as delivery_type_ref_key,\\r\\n    ptd.product_topping_dim_key as product_topping_dim_key,\\r\\n    loc.loc_dim_key as loc_dim_key,\\r\\n    prd.Surr_Product_key as Surr_Product_key,\\r\\n    prm.promotion_dim_key as promotion_dim_key,\\r\\n    dt.date_key as date_key,\\r\\n    ord.order_date as order_date,\\r\\n    ord.order_status as order_status,\\r\\n    orl.quantity as quantity,\\r\\n    orl.unit_price as unit_price,\\r\\n    ptd.topping_price as topping_price,\\r\\n    orl.promotion_amount as promotion_amount\\r\\nFROM\\r\\n         hr.OrderLine orl\\r\\n    JOIN [hr].[Order]            ord ON orl.order_id = ord.order_id\\r\\n    JOIN hr.CUSTOMER_DIM      cust ON cust.customer_id = ord.customer_id\\r\\n    JOIN hr.payment_ref          pmr ON pmr.payment_id = ord.payment_id\\r\\n    JOIN hr.channel_ref          cna ON cna.channel_id = ord.channel_id\\r\\n    JOIN hr.delivery_type_ref    dlv ON ord.delivery_id = dlv.delivery_type_id\\r\\n    JOIN hr.product_toppings_dim   ptd ON orl.product_topping_id = ptd.product_topping_id\\r\\n    JOIN hr.LOCATION_DIM1         loc ON loc.store_location_id = ord.store_location_id\\r\\n    JOIN [hr].[Product_Dim]          prd ON prd.product_id = orl.product_id\\r\\n    JOIN hr.promotion_dim        prm ON prm.promotion_id = orl.promotion_id\\r\\n    JOIN hr.Date_data        dt ON ord.order_date = dt.day_yyyy_mm_dd',",
+						"     format: 'query') ~> source1",
+						"source1 derive(o_Create_User_Date = currentDate()) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          order_line_id as integer,",
+						"          order_id as integer,",
+						"          customer_dim_key as long,",
+						"          payment_ref_key as integer,",
+						"          channel_ref_key as integer,",
+						"          delivery_type_ref_key as integer,",
+						"          product_topping_dim_key as integer,",
+						"          loc_dim_key as integer,",
+						"          Surr_Product_key as integer,",
+						"          promotion_dim_key as integer,",
+						"          date_key as string,",
+						"          order_date as date,",
+						"          order_status as string,",
+						"          quantity as integer,",
+						"          unit_price as decimal(10,2),",
+						"          topping_price as decimal(5,2),",
+						"          promotion_amount as decimal(10,2),",
+						"          DM_create_date as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          order_line_id,",
+						"          order_id,",
+						"          customer_dim_key,",
+						"          payment_ref_key,",
+						"          channel_ref_key,",
+						"          delivery_type_ref_key,",
+						"          product_topping_dim_key,",
+						"          loc_dim_key,",
+						"          Surr_Product_key,",
+						"          promotion_dim_key,",
+						"          date_key,",
+						"          order_date,",
+						"          order_status,",
+						"          quantity,",
+						"          unit_price,",
+						"          topping_price,",
+						"          promotion_amount,",
+						"          DM_create_date = o_Create_User_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_Sales_Fact_joinner')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableOrderLine",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableOrder",
+								"type": "DatasetReference"
+							},
+							"name": "source2"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_PizzaProject_Customer_DIM",
+								"type": "DatasetReference"
+							},
+							"name": "source3"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable_payment_ref",
+								"type": "DatasetReference"
+							},
+							"name": "source4"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableDelivery_type",
+								"type": "DatasetReference"
+							},
+							"name": "source5"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHrChannelRef",
+								"type": "DatasetReference"
+							},
+							"name": "source6"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable_PRODUCT_TOPPINGS_dim",
+								"type": "DatasetReference"
+							},
+							"name": "source7"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "source8"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSourceHrProductDim",
+								"type": "DatasetReference"
+							},
+							"name": "source9"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTablePromotion_dim",
+								"type": "DatasetReference"
+							},
+							"name": "source10"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableDate",
+								"type": "DatasetReference"
+							},
+							"name": "source11"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableSalesFact",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "join1"
+						},
+						{
+							"name": "join2"
+						},
+						{
+							"name": "join3"
+						},
+						{
+							"name": "join4"
+						},
+						{
+							"name": "join5"
+						},
+						{
+							"name": "join6"
+						},
+						{
+							"name": "join7"
+						},
+						{
+							"name": "join8"
+						},
+						{
+							"name": "join9"
+						},
+						{
+							"name": "join10"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "derivedColumn2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          ORDER_LINE_ID as integer,",
+						"          UNIT_PRICE as decimal(10,2),",
+						"          QUANTITY as integer,",
+						"          PROMOTION_AMOUNT as decimal(10,2),",
+						"          PROMOTION_ID as integer,",
+						"          ORDER_ID as integer,",
+						"          PRODUCT_ID as integer,",
+						"          PRODUCT_TOPPING_ID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source1",
+						"source(output(",
+						"          ORDER_ID as integer,",
+						"          ORDER_DATE as date,",
+						"          ORDER_STATUS as string,",
+						"          TOTAL_AMOUNT as decimal(10,2),",
+						"          TOTAL_TAX as decimal(10,2),",
+						"          TIPS as decimal(10,2),",
+						"          TOTAL_QUANTITY as integer,",
+						"          DELIVERY_ID as integer,",
+						"          CHANNEL_ID as integer,",
+						"          STORE_LOCATION_ID as integer,",
+						"          CUSTOMER_ID as integer,",
+						"          PAYMENT_ID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source2",
+						"source(output(",
+						"          CUSTOMER_DIM_KEY as long,",
+						"          CUSTOMER_ID as short,",
+						"          CUSTOMER_FIRST_NAME as string,",
+						"          CUSTOMER_LAST_NAME as string,",
+						"          IS_LOYAL as boolean,",
+						"          CUSTOMER_EMAIL as string,",
+						"          Secondary_Email as string,",
+						"          CUSTOMER_PHONE_NUMBER as string,",
+						"          SecondaryNo as string,",
+						"          Office_ADDRESS_LANE1 as string,",
+						"          Office_ADDRESS_LANE_2 as string,",
+						"          Office_CITY_NAME as string,",
+						"          Office_STATE_NAME as string,",
+						"          Office_COUNTRY_NAME as string,",
+						"          Office_ZIP_CODE as integer,",
+						"          Office_GATE_CODE as short,",
+						"          Residential_ADDRESS_LANE1 as string,",
+						"          Residential_ADDRESS_LANE_2 as string,",
+						"          Residential_CITY_NAME as string,",
+						"          Residential_STATE_NAME as string,",
+						"          Residential_COUNTRY_NAME as string,",
+						"          Residential_ZIP_CODE as integer,",
+						"          Residential_GATE_CODE as short,",
+						"          JOINING_DATE as string,",
+						"          USER_CREATE_DATE as timestamp",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source3",
+						"source(output(",
+						"          Payment_Ref_Key as integer,",
+						"          Payment_ID as integer,",
+						"          Payment_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source4",
+						"source(output(",
+						"          Delivery_Type_Ref_key as integer,",
+						"          Delivery_Type_ID as integer,",
+						"          Delivery_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source5",
+						"source(output(",
+						"          Channel_ref_key as integer,",
+						"          Channel_ID as integer,",
+						"          Channel_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source6",
+						"source(output(",
+						"          Product_Topping_Dim_Key as integer,",
+						"          Product_Topping_ID as integer,",
+						"          Topping_Name as string,",
+						"          Topping_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          Effective_Date as date,",
+						"          END_DATE as date,",
+						"          Flag as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source7",
+						"source(output(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source8",
+						"source(output(",
+						"          Surr_Product_kEY as integer,",
+						"          Product_ID as integer,",
+						"          Product_Name as string,",
+						"          Product_Price as decimal(5,2),",
+						"          Is_Active as string,",
+						"          PRODUCT_CATEGORY_ID as string,",
+						"          Product_Category_Name as string,",
+						"          Product_SubCategory_ID as integer,",
+						"          Product_SubCategory_Name as string,",
+						"          Product_Size as string,",
+						"          Product_Description as string,",
+						"          Eff_Start_Date as date,",
+						"          Eff_End_Date as date,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source9",
+						"source(output(",
+						"          PROMOTION_DIM_KEY as integer,",
+						"          PROMOTION_ID as integer,",
+						"          PROMOTION_NAME as string,",
+						"          PREVIOUS_PROMOTION_NAME as string,",
+						"          PROMOTION_TYPE as string,",
+						"          PREVIOUS_PROMOTION_TYPE as string,",
+						"          DISCOUNT_AMOUNT as decimal(5,2),",
+						"          PREVIOUS_DISCOUNT_AMOUNT as decimal(5,2),",
+						"          START_DATE as date,",
+						"          PREVIOUS_START_DATE as date,",
+						"          END_DATE as date,",
+						"          PREVIOUS_END_DATE as date,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source10",
+						"source(output(",
+						"          DATE_KEY as string,",
+						"          DAY_YYYY_MM_DD as timestamp,",
+						"          DAY_US_MM_DD_YYYY as timestamp,",
+						"          DAY_US_LONG as string,",
+						"          DAY_US_M_D_YY as timestamp,",
+						"          WEEK_SHORT as string,",
+						"          WEEK_NUMBER as string,",
+						"          WEEK_LONG as string,",
+						"          MONTH_IN_QUARTER_NUMBER as string,",
+						"          MONTH_IN_YEAR_SHORT as string,",
+						"          MONTH_IN_YEAR_LONG as string,",
+						"          WEEK_WK_QTR_YEAR as string,",
+						"          WEEK_FROM_TO as string,",
+						"          WEEK_STARTING as string,",
+						"          WEEK_WK_YEAR_CONT as string,",
+						"          WEEK_WK_YEAR as string,",
+						"          WEEK_WK_QTR_YEAR_CONT as string,",
+						"          DAY_IN_WEEK_SHORT as string,",
+						"          DAY_IN_WEEK_NUMBER as string,",
+						"          DAY_IN_WEEK_LONG as string,",
+						"          MONTH_SHORT as string,",
+						"          MONTH_NUMBER as string,",
+						"          MONTH_LONG as string,",
+						"          QUARTER_SHORT_US as string,",
+						"          YEAR as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source11",
+						"source11 derive(o_day_mm_dd_yyyy = toDate(fromUTC(DAY_YYYY_MM_DD, 'MM/dd/yyyy'))) ~> derivedColumn1",
+						"source1, source2 join(source1@ORDER_ID == source2@ORDER_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1, source3 join(source2@CUSTOMER_ID == source3@CUSTOMER_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join2",
+						"join2, source4 join(source2@PAYMENT_ID == source4@Payment_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join3",
+						"join3, source5 join(DELIVERY_ID == Delivery_Type_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join4",
+						"join4, source6 join(source2@CHANNEL_ID == source6@Channel_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join5",
+						"join5, source7 join(source1@PRODUCT_TOPPING_ID == source7@Product_Topping_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join6",
+						"join6, source8 join(source2@STORE_LOCATION_ID == source8@Store_Location_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join7",
+						"join7, source9 join(source1@PRODUCT_ID == source9@Product_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join8",
+						"join8, source10 join(source1@PROMOTION_ID == source10@PROMOTION_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join9",
+						"join9, derivedColumn1 join(ORDER_DATE == o_day_mm_dd_yyyy,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join10",
+						"join10 select(mapColumn(",
+						"          ORDER_LINE_ID,",
+						"          ORDER_ID = source2@ORDER_ID,",
+						"          CUSTOMER_DIM_KEY,",
+						"          Payment_Ref_Key,",
+						"          Channel_ref_key,",
+						"          Delivery_Type_Ref_key,",
+						"          Product_Topping_Dim_Key,",
+						"          Loc_Dim_Key,",
+						"          Surr_Product_kEY,",
+						"          PROMOTION_DIM_KEY,",
+						"          DATE_KEY,",
+						"          ORDER_DATE,",
+						"          ORDER_STATUS,",
+						"          QUANTITY,",
+						"          UNIT_PRICE,",
+						"          Topping_Price,",
+						"          PROMOTION_AMOUNT,",
+						"          each(match(/* All input columns */true()),",
+						"               /* Input name */$$ = $$)",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"select1 derive(o_create_Date = currentDate()) ~> derivedColumn2",
+						"derivedColumn2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          order_line_id as integer,",
+						"          order_id as integer,",
+						"          customer_dim_key as long,",
+						"          payment_ref_key as integer,",
+						"          channel_ref_key as integer,",
+						"          delivery_type_ref_key as integer,",
+						"          product_topping_dim_key as integer,",
+						"          loc_dim_key as integer,",
+						"          Surr_Product_key as integer,",
+						"          promotion_dim_key as integer,",
+						"          date_key as string,",
+						"          order_date as date,",
+						"          order_status as string,",
+						"          quantity as integer,",
+						"          unit_price as decimal(10,2),",
+						"          topping_price as decimal(5,2),",
+						"          promotion_amount as decimal(10,2),",
+						"          DM_create_date as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          order_line_id = ORDER_LINE_ID,",
+						"          order_id = ORDER_ID,",
+						"          customer_dim_key = CUSTOMER_DIM_KEY,",
+						"          payment_ref_key = Payment_Ref_Key,",
+						"          channel_ref_key = Channel_ref_key,",
+						"          delivery_type_ref_key = Delivery_Type_Ref_key,",
+						"          product_topping_dim_key = Product_Topping_Dim_Key,",
+						"          loc_dim_key = Loc_Dim_Key,",
+						"          Surr_Product_key = Surr_Product_kEY,",
+						"          promotion_dim_key = PROMOTION_DIM_KEY,",
+						"          date_key = DATE_KEY,",
+						"          order_date = ORDER_DATE,",
+						"          order_status = ORDER_STATUS,",
+						"          quantity = QUANTITY,",
+						"          unit_price = UNIT_PRICE,",
+						"          topping_price = Topping_Price,",
+						"          promotion_amount = PROMOTION_AMOUNT,",
+						"          DM_create_date = o_create_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df__member_loyalty_1_to_member_loyalty')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "we are transfering the data type we don't need all as a varchar or string so we can change data type",
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTablemember_loyalty",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableMemberLoyalty",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cast1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          MEMBER_ID as string,",
+						"          ORDER_DATE as string,",
+						"          INITIAL_POINTS_RECEIVED_DATE as string,",
+						"          INITIAL_REWARD_POINTS as string,",
+						"          LAST_EARNED_POINTS as string,",
+						"          TOTAL_POINTS_EARNED as string,",
+						"          REMAINING_POINTS as string,",
+						"          IS_ACTIVE as string,",
+						"          STORE_LOCATION_ID as string,",
+						"          ORDER_ID as string,",
+						"          TOTAL_AMOUNT as string,",
+						"          HUT_LOVER_ID as string,",
+						"          CUSTOMER_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source1",
+						"source1 cast(output(",
+						"          MEMBER_ID as integer,",
+						"          ORDER_DATE as date 'MM/dd/yyyy',",
+						"          INITIAL_POINTS_RECEIVED_DATE as date 'MM/dd/yyyy',",
+						"          INITIAL_REWARD_POINTS as integer,",
+						"          LAST_EARNED_POINTS as integer,",
+						"          TOTAL_POINTS_EARNED as integer,",
+						"          REMAINING_POINTS as integer,",
+						"          STORE_LOCATION_ID as integer,",
+						"          ORDER_ID as integer,",
+						"          TOTAL_AMOUNT as decimal(10,2),",
+						"          HUT_LOVER_ID as integer,",
+						"          CUSTOMER_ID as integer",
+						"     ),",
+						"     errors: true) ~> cast1",
+						"cast1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     recreate:true,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_alter_row')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source1 alterRow(insertIf(1==1),",
+						"     partitionBy('hash', 1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          EMPLOYEE_ID,",
+						"          FIRST_NAME,",
+						"          LAST_NAME,",
+						"          EMAIL,",
+						"          PHONE_NUMBER,",
+						"          HIRE_DATE,",
+						"          JOB_ID,",
+						"          SALARY,",
+						"          COMMISSION_PCT,",
+						"          MANAGER_ID,",
+						"          DEPARTMENT_ID",
+						"     ),",
+						"     partitionBy('hash', 1),",
+						"     preCommands: [],",
+						"     postCommands: []) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_alter_row_join_table_dept')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_dept_src",
+								"type": "DatasetReference"
+							},
+							"name": "source2"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "alterRow1"
+						},
+						{
+							"name": "join1"
+						},
+						{
+							"name": "select1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source(output(",
+						"          DEPARTMENT_ID as short,",
+						"          DEPARTMENT_NAME as string,",
+						"          MANAGER_ID as short,",
+						"          LOCATION_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source2",
+						"select1 alterRow(upsertIf(1==1),",
+						"     partitionBy('hash', 1)) ~> alterRow1",
+						"source1, source2 join(source1@DEPARTMENT_ID == source2@DEPARTMENT_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1 select(mapColumn(",
+						"          EMPLOYEE_ID,",
+						"          FIRST_NAME,",
+						"          LAST_NAME,",
+						"          EMAIL,",
+						"          PHONE_NUMBER,",
+						"          HIRE_DATE,",
+						"          JOB_ID,",
+						"          SALARY,",
+						"          COMMISSION_PCT,",
+						"          MANAGER_ID = source1@MANAGER_ID,",
+						"          DEPARTMENT_ID = source1@DEPARTMENT_ID,",
+						"          DEPARTMENT_ID = source2@DEPARTMENT_ID,",
+						"          DEPARTMENT_NAME,",
+						"          MANAGER_ID = source2@MANAGER_ID,",
+						"          LOCATION_ID",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['EMPLOYEE_ID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          EMPLOYEE_ID,",
+						"          FIRST_NAME,",
+						"          LAST_NAME,",
+						"          EMAIL,",
+						"          PHONE_NUMBER,",
+						"          HIRE_DATE,",
+						"          JOB_ID,",
+						"          SALARY,",
+						"          COMMISSION_PCT,",
+						"          MANAGER_ID,",
+						"          DEPARTMENT_ID,",
+						"          DEPARTMENT_NAME",
+						"     ),",
+						"     partitionBy('hash', 1),",
+						"     preCommands: [],",
+						"     postCommands: []) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_alter_row_join_table_dept_delete')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference"
+							},
+							"name": "source2"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "alterRow1"
+						},
+						{
+							"name": "join1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short,",
+						"          DEPARTMENT_NAME as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source2",
+						"join1 alterRow(deleteIf(isNull(source1@EMPLOYEE_ID)),",
+						"     partitionBy('hash', 1)) ~> alterRow1",
+						"source1, source2 join(source1@EMPLOYEE_ID == source2@EMPLOYEE_ID,",
+						"     joinType:'right',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:true,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     keys:['EMPLOYEE_ID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          EMPLOYEE_ID = source2@EMPLOYEE_ID,",
+						"          FIRST_NAME = source1@FIRST_NAME,",
+						"          LAST_NAME = source1@LAST_NAME,",
+						"          EMAIL = source1@EMAIL,",
+						"          PHONE_NUMBER = source1@PHONE_NUMBER,",
+						"          HIRE_DATE = source1@HIRE_DATE,",
+						"          JOB_ID = source1@JOB_ID,",
+						"          SALARY = source1@SALARY,",
+						"          COMMISSION_PCT = source1@COMMISSION_PCT,",
+						"          MANAGER_ID = source1@MANAGER_ID,",
+						"          DEPARTMENT_ID = source1@DEPARTMENT_ID,",
+						"          DEPARTMENT_NAME",
+						"     ),",
+						"     partitionBy('hash', 1),",
+						"     preCommands: [],",
+						"     postCommands: []) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_channel_type')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "dt_channel_ref",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHrChannelRef",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          CHANNEL_ID as short,",
+						"          CHANNEL_TYPE as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 derive(o_Date = currentDate()) ~> derivedColumn1",
+						"derivedColumn1 alterRow(upsertIf(1==1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Channel_ref_key as integer,",
+						"          Channel_ID as integer,",
+						"          Channel_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['Channel_ID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Channel_ID = CHANNEL_ID,",
+						"          Channel_Type = CHANNEL_TYPE,",
+						"          STG_CREATE_DATE = o_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_conditional_split')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_aelisa_DepWiseSalary_csv",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_aelisa_DepWiseSalary_csv",
+								"type": "DatasetReference"
+							},
+							"name": "sink2"
+						},
+						{
+							"dataset": {
+								"referenceName": "ds_aelisa_DepWiseSalary_csv",
+								"type": "DatasetReference"
+							},
+							"name": "sink3"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cast1"
+						},
+						{
+							"name": "split1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 cast(output(",
+						"          EMPLOYEE_ID as integer,",
+						"          SALARY as decimal(10,2),",
+						"          COMMISSION_PCT as decimal(5,2),",
+						"          DEPARTMENT_ID as integer",
+						"     ),",
+						"     errors: true) ~> cast1",
+						"cast1 split(SALARY>10000,",
+						"     SALARY>=5000 && SALARY<=10000,",
+						"     disjoint: false) ~> split1@(salaryup10000, salarybet500010000, other)",
+						"split1@salaryup10000 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['salary_over_10000.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1",
+						"split1@salarybet500010000 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['salary_bet_5000_10000.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink2",
+						"split1@other sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['salary_under_5000.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink3"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_csv_to_stg_promotion')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_stg_PROMOTION",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable_Hr_Stg_Promotion",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          PROMOTION_ID as short,",
+						"          PROMOTION_NAME as string,",
+						"          PROMOTION_TYPE as string,",
+						"          DISCOUNT_AMOUNT as string,",
+						"          START_DATE as string,",
+						"          END_DATE as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 derive(o_start_date = toDate(START_DATE,'MM/dd/yyyy'),",
+						"          o_end_date = toDate(END_DATE,'MM/dd/yyyy'),",
+						"          o_discount_price = toDecimal(replace(DISCOUNT_AMOUNT,'%',''), 5, 2)) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Promotion_ID as integer,",
+						"          Promotion_Name as string,",
+						"          Promotion_Type as string,",
+						"          Discount_amount as decimal(5,2),",
+						"          START_DATE as date,",
+						"          END_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Promotion_ID = PROMOTION_ID,",
+						"          Promotion_Name = PROMOTION_NAME,",
+						"          Promotion_Type = PROMOTION_TYPE,",
+						"          Discount_amount = o_discount_price,",
+						"          START_DATE = o_start_date,",
+						"          END_DATE = o_end_date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_customer_review_FACT')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableCustReviewStg",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTablecustomer_review_FACT",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          customer_dim_key as long,",
+						"          loc_dim_key as integer,",
+						"          date_key as string,",
+						"          order_id as integer,",
+						"          feedback as string,",
+						"          feedback_date as date,",
+						"          recomended as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'SELECT\\n    cust.customer_dim_key,\\n    loc.loc_dim_key,\\n    dt.date_key,\\n    csr.order_id,\\n    csr.feedback,\\n    csr.feedback_date,\\n    csr.recomended\\nFROM\\n         hr.stg_customer_review csr\\n    JOIN [hr].[Order]   ord ON csr.order_id = ord.order_id\\n    JOIN hr.CUSTOMER_DIM  cust ON csr.customer_id = cust.customer_id\\n    JOIN [hr].[LOCATION_DIM1] loc ON ord.store_location_id = loc.store_location_id\\n    JOIN hr.Date_data dt ON csr.feedback_date = dt.day_yyyy_mm_dd',",
+						"     format: 'query') ~> source1",
+						"source1 derive(o_Create_Date = currentDate()) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          customer_dim_key as long,",
+						"          loc_dim_key as integer,",
+						"          date_key as string,",
+						"          order_id as integer,",
+						"          feedback as string,",
+						"          feedback_date as date,",
+						"          recomended as string,",
+						"          DM_create_date as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          customer_dim_key,",
+						"          loc_dim_key,",
+						"          date_key,",
+						"          order_id,",
+						"          feedback,",
+						"          feedback_date,",
+						"          recomended,",
+						"          DM_create_date = o_Create_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_customer_review_FACT_with_joinner')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableCustReviewStg",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableOrder",
+								"type": "DatasetReference"
+							},
+							"name": "source2"
+						},
+						{
+							"dataset": {
+								"referenceName": "df_PizzaProject_Customer_DIM",
+								"type": "DatasetReference"
+							},
+							"name": "source3"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "source4"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableDate",
+								"type": "DatasetReference"
+							},
+							"name": "source5"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTablecustomer_review_FACT",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "join1"
+						},
+						{
+							"name": "join2"
+						},
+						{
+							"name": "join3"
+						},
+						{
+							"name": "join4"
+						},
+						{
+							"name": "select2"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "derivedColumn2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          CUSTOMER_REVIEW_ID as integer,",
+						"          RATING_SCALE as decimal(5,2),",
+						"          FEEDBACK as string,",
+						"          FEEDBACK_DATE as date,",
+						"          RECOMENDED as string,",
+						"          CUSTOMER_ID as integer,",
+						"          ORDER_ID as integer,",
+						"          STORE_ID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source1",
+						"source(output(",
+						"          ORDER_ID as integer,",
+						"          ORDER_DATE as date,",
+						"          ORDER_STATUS as string,",
+						"          TOTAL_AMOUNT as decimal(10,2),",
+						"          TOTAL_TAX as decimal(10,2),",
+						"          TIPS as decimal(10,2),",
+						"          TOTAL_QUANTITY as integer,",
+						"          DELIVERY_ID as integer,",
+						"          CHANNEL_ID as integer,",
+						"          STORE_LOCATION_ID as integer,",
+						"          CUSTOMER_ID as integer,",
+						"          PAYMENT_ID as integer",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source2",
+						"source(output(",
+						"          CUSTOMER_DIM_KEY as long,",
+						"          CUSTOMER_ID as short,",
+						"          CUSTOMER_FIRST_NAME as string,",
+						"          CUSTOMER_LAST_NAME as string,",
+						"          IS_LOYAL as boolean,",
+						"          CUSTOMER_EMAIL as string,",
+						"          Secondary_Email as string,",
+						"          CUSTOMER_PHONE_NUMBER as string,",
+						"          SecondaryNo as string,",
+						"          Office_ADDRESS_LANE1 as string,",
+						"          Office_ADDRESS_LANE_2 as string,",
+						"          Office_CITY_NAME as string,",
+						"          Office_STATE_NAME as string,",
+						"          Office_COUNTRY_NAME as string,",
+						"          Office_ZIP_CODE as integer,",
+						"          Office_GATE_CODE as short,",
+						"          Residential_ADDRESS_LANE1 as string,",
+						"          Residential_ADDRESS_LANE_2 as string,",
+						"          Residential_CITY_NAME as string,",
+						"          Residential_STATE_NAME as string,",
+						"          Residential_COUNTRY_NAME as string,",
+						"          Residential_ZIP_CODE as integer,",
+						"          Residential_GATE_CODE as short,",
+						"          JOINING_DATE as string,",
+						"          USER_CREATE_DATE as timestamp",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source3",
+						"source(output(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source4",
+						"source(output(",
+						"          DATE_KEY as string,",
+						"          DAY_YYYY_MM_DD as timestamp,",
+						"          DAY_US_MM_DD_YYYY as timestamp,",
+						"          DAY_US_LONG as string,",
+						"          DAY_US_M_D_YY as timestamp,",
+						"          WEEK_SHORT as string,",
+						"          WEEK_NUMBER as string,",
+						"          WEEK_LONG as string,",
+						"          MONTH_IN_QUARTER_NUMBER as string,",
+						"          MONTH_IN_YEAR_SHORT as string,",
+						"          MONTH_IN_YEAR_LONG as string,",
+						"          WEEK_WK_QTR_YEAR as string,",
+						"          WEEK_FROM_TO as string,",
+						"          WEEK_STARTING as string,",
+						"          WEEK_WK_YEAR_CONT as string,",
+						"          WEEK_WK_YEAR as string,",
+						"          WEEK_WK_QTR_YEAR_CONT as string,",
+						"          DAY_IN_WEEK_SHORT as string,",
+						"          DAY_IN_WEEK_NUMBER as string,",
+						"          DAY_IN_WEEK_LONG as string,",
+						"          MONTH_SHORT as string,",
+						"          MONTH_NUMBER as string,",
+						"          MONTH_LONG as string,",
+						"          QUARTER_SHORT_US as string,",
+						"          YEAR as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source5",
+						"source1, source2 join(source1@ORDER_ID == source2@ORDER_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1, source3 join(source1@CUSTOMER_ID == source3@CUSTOMER_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join2",
+						"join2, source4 join(source2@STORE_LOCATION_ID == source4@Store_Location_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join3",
+						"join3, derivedColumn2 join(FEEDBACK_DATE == o_day_mm_dd_yyyy,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join4",
+						"join4 select(mapColumn(",
+						"          CUSTOMER_DIM_KEY,",
+						"          Loc_Dim_Key,",
+						"          DATE_KEY,",
+						"          ORDER_ID = source2@ORDER_ID,",
+						"          FEEDBACK,",
+						"          FEEDBACK_DATE,",
+						"          RECOMENDED",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select2",
+						"select2 derive(o_Create_Date = currentDate()) ~> derivedColumn1",
+						"source5 derive(o_day_mm_dd_yyyy = toDate(fromUTC(DAY_YYYY_MM_DD, 'MM/dd/yyyy'))) ~> derivedColumn2",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          customer_dim_key as long,",
+						"          loc_dim_key as integer,",
+						"          date_key as string,",
+						"          order_id as integer,",
+						"          feedback as string,",
+						"          feedback_date as date,",
+						"          recomended as string,",
+						"          DM_create_date as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          customer_dim_key = CUSTOMER_DIM_KEY,",
+						"          loc_dim_key = Loc_Dim_Key,",
+						"          date_key = DATE_KEY,",
+						"          order_id = ORDER_ID,",
+						"          feedback = FEEDBACK,",
+						"          feedback_date = FEEDBACK_DATE,",
+						"          recomended = RECOMENDED,",
+						"          DM_create_date = o_Create_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_delivery_type')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "dt_delivery_methods",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableDelivery_type",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          DELIVERY_ID as short,",
+						"          DELIVERY_TYPE as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 derive(o_Date = currentDate()) ~> derivedColumn1",
+						"derivedColumn1 alterRow(upsertIf(1==1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Delivery_Type_Ref_key as integer,",
+						"          Delivery_Type_ID as integer,",
+						"          Delivery_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['Delivery_Type_ID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Delivery_Type_ID = DELIVERY_ID,",
+						"          Delivery_Type = DELIVERY_TYPE,",
+						"          STG_CREATE_DATE = o_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_dep_wish_salary')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_aelisa_DepWiseSalary_csv",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cast1"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "aggregate1"
+						},
+						{
+							"name": "sort1"
+						},
+						{
+							"name": "join1"
+						},
+						{
+							"name": "select2"
+						},
+						{
+							"name": "sort2"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as string,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as string,",
+						"          COMMISSION_PCT as string,",
+						"          MANAGER_ID as string,",
+						"          DEPARTMENT_ID as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 cast(output(",
+						"          EMPLOYEE_ID as integer,",
+						"          SALARY as decimal(10,2),",
+						"          DEPARTMENT_ID as integer",
+						"     ),",
+						"     errors: true) ~> cast1",
+						"cast1 select(mapColumn(",
+						"          DEPARTMENT_ID,",
+						"          SALARY",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"sort1 aggregate(groupBy(DEPARTMENT_ID),",
+						"     min_salary = min(SALARY),",
+						"          max_salary = max(SALARY),",
+						"          avg_salary = avg(SALARY),",
+						"          sum_salary = sum(SALARY),",
+						"          count_dept_id = count(DEPARTMENT_ID)) ~> aggregate1",
+						"select1 sort(asc(DEPARTMENT_ID, true)) ~> sort1",
+						"aggregate1, cast1 join(aggregate1@DEPARTMENT_ID == cast1@DEPARTMENT_ID,",
+						"     joinType:'inner',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> join1",
+						"join1 select(mapColumn(",
+						"          FIRST_NAME,",
+						"          DEPARTMENT_ID = aggregate1@DEPARTMENT_ID,",
+						"          SALARY,",
+						"          min_salary,",
+						"          max_salary,",
+						"          avg_salary,",
+						"          sum_salary,",
+						"          count_dept_id",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select2",
+						"select2 sort(asc(DEPARTMENT_ID, true)) ~> sort2",
+						"sort2 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['DepWiseSalary.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_lOCATION_DIM_QUERY_SCD2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "df_pizzaproject_Location_DIM",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "sinkinsert"
+						}
+					],
+					"transformations": [
+						{
+							"name": "filterinsert"
+						},
+						{
+							"name": "filterUPDATE"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          src_Store_Location_ID as short,",
+						"          src_Store_Name as string,",
+						"          src_Store_Address as string,",
+						"          src_Store_Open_Time as string,",
+						"          src_Store_Close_Time as string,",
+						"          src_State_Name as string,",
+						"          tgt_Store_Location_ID as integer,",
+						"          tgt_Store_Name as string,",
+						"          tgt_Store_Address as string,",
+						"          tgt_Store_Open_Time as string,",
+						"          tgt_Store_Close_Time as string,",
+						"          tgt_State_Name as string,",
+						"          tgt_FLAG as string,",
+						"          Loc_Dim_Key as integer,",
+						"          DM_CREATE_DATE as date,",
+						"          src_md5 as binary,",
+						"          tgt_md5 as binary,",
+						"          flag_new as string,",
+						"          flag_deactivate as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'select \\r\\nsrc_Store_Location_ID\\r\\n,src_Store_Name\\r\\n,src_Store_Address\\r\\n,src_Store_Open_Time\\r\\n,src_Store_Close_Time\\r\\n,src_State_Name\\r\\n,tgt_Store_Location_ID\\r\\n,tgt_Store_Name\\r\\n,tgt_Store_Address\\r\\n,tgt_Store_Open_Time\\r\\n,tgt_Store_Close_Time\\r\\n,tgt_State_Name\\r\\n,tgt_FLAG\\r\\n,Loc_Dim_Key\\r\\n,DM_CREATE_DATE\\r\\n,src_md5\\r\\n,tgt_md5\\r\\n,case when tgt_Store_Location_ID is NULL or src_md5 <> tgt_md5 then \\'Y\\' end flag_new\\r\\n,case when tgt_Store_Location_ID is not NULL and src_md5 <> tgt_md5 then \\'N\\' end flag_deactivate\\r\\nfrom ( \\r\\nselect \\r\\nA.Store_Location_ID as src_Store_Location_ID,\\r\\nA.Store_Name as src_Store_Name,\\r\\nA.Store_Address as src_Store_Address,\\r\\nA.Store_Open_Time as src_Store_Open_Time,\\r\\nA.Store_Close_Time as src_Store_Close_Time,\\r\\nA.State_Name as src_State_Name,\\r\\nB.Store_Location_ID as tgt_Store_Location_ID,\\r\\nB.Store_Name as tgt_Store_Name,\\r\\nB.Store_Address as tgt_Store_Address,\\r\\nB.Store_Open_Time as tgt_Store_Open_Time,\\r\\nB.Store_Close_Time as tgt_Store_Close_Time,\\r\\nB.State_Name as tgt_State_Name,\\r\\nB.FLAG as tgt_FLAG,\\r\\nB.Loc_Dim_Key,\\r\\ncast(getdate() as date) as DM_CREATE_DATE,\\r\\nHashBytes(\\'MD5\\',concat(cast(A.Store_Name as varchar),cast(A.Store_Address as varchar),cast(A.Store_Open_Time as varchar),cast(A.Store_Close_Time as varchar),cast(A.State_Name as varchar))) as src_md5,\\r\\nHashBytes(\\'MD5\\',concat(cast(B.Store_Name as varchar),cast(B.Store_Address as varchar),cast(B.Store_Open_Time as varchar),cast(B.Store_Close_Time as varchar),cast(B.State_Name as varchar))) as tgt_md5\\r\\nfrom HR.location_dim A \\r\\nleft Join HR.location_dim1 B on \\r\\nA.Store_Location_ID = B.Store_Location_ID\\r\\nwhere B.FLAG = \\'Y\\'\\r\\n)a',",
+						"     format: 'query') ~> source1",
+						"source1 filter(isNull(tgt_Store_Location_ID) || src_md5 != tgt_md5) ~> filterinsert",
+						"source1 filter(!isNull(tgt_Store_Location_ID) && src_md5 != tgt_md5) ~> filterUPDATE",
+						"filterUPDATE alterRow(updateIf(1==1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:true,",
+						"     upsertable:false,",
+						"     keys:['Loc_Dim_Key'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 1,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Loc_Dim_Key,",
+						"          FLAG = flag_deactivate",
+						"     )) ~> sink1",
+						"filterinsert sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Store_Location_ID = src_Store_Location_ID,",
+						"          Store_Name = src_Store_Name,",
+						"          Store_Address = src_Store_Address,",
+						"          Store_Open_Time = src_Store_Open_Time,",
+						"          Store_Close_Time = src_Store_Close_Time,",
+						"          State_Name = src_State_Name,",
+						"          FLAG = flag_new,",
+						"          DM_CREATE_DATE",
+						"     )) ~> sinkinsert"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_lOCATION_DIM_SCD2_copy1')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "df_pizzaproject_Location_DIM",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "source2"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTableHRLOCATION_DIM1",
+								"type": "DatasetReference"
+							},
+							"name": "sinkinsert"
+						}
+					],
+					"transformations": [
+						{
+							"name": "filterinsert"
+						},
+						{
+							"name": "filterUPDATE"
+						},
+						{
+							"name": "alterRow1"
+						},
+						{
+							"name": "lookup1"
+						},
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {Location_Dim_Key } as long,",
+						"          STORE_LOCATION_ID as short,",
+						"          STORE_NAME as string,",
+						"          STORE_ADDRESS as string,",
+						"          STORE_PHONE_NUMBER as string,",
+						"          STORE_OPEN_TIME as string,",
+						"          STORE_CLOSE_TIME as string,",
+						"          STATE_NAME as string,",
+						"          STATE_COUNTRY as string,",
+						"          CREATE_USER_DATE as timestamp",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table') ~> source1",
+						"source(output(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     query: 'select * from  HR.LOCATION_DIM1 where Flag = \\'Active\\'',",
+						"     format: 'query') ~> source2",
+						"derivedColumn1 filter(isNull(source2@Store_Location_ID) || src_md5 != tgt_md5) ~> filterinsert",
+						"derivedColumn1 filter(!isNull(source2@Store_Location_ID) && src_md5 != tgt_md5) ~> filterUPDATE",
+						"filterUPDATE alterRow(updateIf(1==1)) ~> alterRow1",
+						"source1, source2 lookup(source1@STORE_LOCATION_ID == source2@Store_Location_ID,",
+						"     multiple: true,",
+						"     broadcast: 'auto',",
+						"     pickup: 'any')~> lookup1",
+						"lookup1 derive(o_create_date = currentDate(),",
+						"          Flag_Active = 'Active',",
+						"          Flag_Inactive = 'InActive',",
+						"          src_md5 = md5(concat(source1@STORE_NAME,source1@STORE_ADDRESS,source1@STORE_OPEN_TIME,source1@STORE_CLOSE_TIME,source1@STATE_NAME)),",
+						"          tgt_md5 = md5(concat(source2@Store_Name, source2@Store_Address,source2@Store_Open_Time,source2@Store_Close_Time,source2@State_Name))) ~> derivedColumn1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:true,",
+						"     upsertable:false,",
+						"     keys:['Loc_Dim_Key'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 1,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Loc_Dim_Key,",
+						"          FLAG = Flag_Inactive,",
+						"          DM_CREATE_DATE = CREATE_USER_DATE",
+						"     )) ~> sink1",
+						"filterinsert sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Loc_Dim_Key as integer,",
+						"          Store_Location_ID as integer,",
+						"          Store_Name as string,",
+						"          Store_Address as string,",
+						"          Store_Open_Time as string,",
+						"          Store_Close_Time as string,",
+						"          State_Name as string,",
+						"          FLAG as string,",
+						"          DM_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     saveOrder: 2,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Store_Location_ID = source1@STORE_LOCATION_ID,",
+						"          Store_Name = source1@STORE_NAME,",
+						"          Store_Address = source1@STORE_ADDRESS,",
+						"          Store_Open_Time = source1@STORE_OPEN_TIME,",
+						"          Store_Close_Time = source1@STORE_CLOSE_TIME,",
+						"          State_Name = source1@STATE_NAME,",
+						"          FLAG = Flag_Active,",
+						"          DM_CREATE_DATE = o_create_date",
+						"     )) ~> sinkinsert"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_lead_lag_salary')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_data_Target_DataLoad_employee_csv",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ds_aelisa_DepWiseSalary_csv",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cast1"
+						},
+						{
+							"name": "window1"
+						},
+						{
+							"name": "select1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 cast(output(",
+						"          EMPLOYEE_ID as integer,",
+						"          SALARY as decimal(10,2),",
+						"          COMMISSION_PCT as decimal(5,2),",
+						"          DEPARTMENT_ID as integer",
+						"     ),",
+						"     errors: true) ~> cast1",
+						"cast1 window(asc(SALARY, true),",
+						"     LEAD_Salary = lead(SALARY),",
+						"          LAG_Salary = lag(SALARY)) ~> window1",
+						"window1 select(mapColumn(",
+						"          EMPLOYEE_ID,",
+						"          FIRST_NAME,",
+						"          DEPARTMENT_ID,",
+						"          SALARY,",
+						"          LEAD_Salary,",
+						"          LAG_Salary",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"select1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     partitionFileNames:['lead_lag_salary.csv'],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_merge_file_department_name')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ds_src_tgt_dep_name",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "cast1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EMPLOYEE_ID as short,",
+						"          FIRST_NAME as string,",
+						"          LAST_NAME as string,",
+						"          EMAIL as string,",
+						"          PHONE_NUMBER as string,",
+						"          HIRE_DATE as string,",
+						"          JOB_ID as string,",
+						"          SALARY as double,",
+						"          COMMISSION_PCT as double,",
+						"          MANAGER_ID as short,",
+						"          DEPARTMENT_ID as short,",
+						"          DEPARTMENT_NAME as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     rowUrlColumn: 'FileName',",
+						"     wildcardPaths:['Department_Name/*.csv'],",
+						"     partitionBy('hash', 1)) ~> source1",
+						"source1 cast(output(",
+						"          EMPLOYEE_ID as integer,",
+						"          HIRE_DATE as date 'MM-dd-yyyy',",
+						"          SALARY as decimal(10,2),",
+						"          COMMISSION_PCT as decimal(5,2),",
+						"          DEPARTMENT_ID as integer",
+						"     ),",
+						"     errors: true) ~> cast1",
+						"cast1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          EMPLOYEE_ID,",
+						"          FIRST_NAME,",
+						"          LAST_NAME,",
+						"          EMAIL,",
+						"          PHONE_NUMBER,",
+						"          HIRE_DATE,",
+						"          JOB_ID,",
+						"          SALARY,",
+						"          COMMISSION_PCT,",
+						"          MANAGER_ID,",
+						"          DEPARTMENT_ID,",
+						"          DEPARTMENT_NAME,",
+						"          FileName",
+						"     ),",
+						"     partitionBy('hash', 1)) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_paymeent_ref')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"folder": {
+					"name": "pizzaproject"
+				},
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "dt_payment_method",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "AzureSqlTable_payment_ref",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          PAYMENT_ID as short,",
+						"          PAYMENT_TYPE as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"source1 derive(o_Currect_Date = currentDate()) ~> derivedColumn1",
+						"derivedColumn1 alterRow(upsertIf(1==1)) ~> alterRow1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Payment_Ref_Key as integer,",
+						"          Payment_ID as integer,",
+						"          Payment_Type as string,",
+						"          STG_CREATE_DATE as date",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:false,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['Payment_ID'],",
+						"     format: 'table',",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          Payment_ID = PAYMENT_ID,",
+						"          Payment_Type = PAYMENT_TYPE,",
+						"          STG_CREATE_DATE = o_Currect_Date",
+						"     )) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
